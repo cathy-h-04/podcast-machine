@@ -3,7 +3,7 @@ import azure.cognitiveservices.speech as speechsdk
 class TTSClient:
     def __init__(self, subscription_key, region):
         """
-        Initialize the Azure Speech SDK client.
+        Initialize the Azure Speech SDK client
         
         Args:
             subscription_key (str): Azure Speech API subscription key.
