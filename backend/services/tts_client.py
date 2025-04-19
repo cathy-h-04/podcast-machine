@@ -1,4 +1,6 @@
 import azure.cognitiveservices.speech as speechsdk
+from dotenv import load_dotenv
+import os
 
 class TTSClient:
     def __init__(self, subscription_key, region):
@@ -9,8 +11,13 @@ class TTSClient:
             subscription_key (str): Azure Speech API subscription key.
             region (str): Azure region for the Speech resource.
         """
-        self.subscription_key = subscription_key
-        self.region = region
+        load_dotenv()
+        self.subscription_key = os.getenv('AZURE_SPEECH_KEY')
+        self.region = os.getenv('AZURE_SPEECH_REGION')
+        
+        if not self.subscription_key or not self.region:
+            raise ValueError("Azure Speech credentials not found in environment variables")
+    
         self.default_voice = "en-US-MatthewNeural"  # Default voice
         self.supported_voices = {
             "male": ["en-US-MatthewNeural", "en-US-GuyNeural"],
