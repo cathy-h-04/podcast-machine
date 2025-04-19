@@ -3,7 +3,10 @@ import { useState, useEffect } from "react";
 export function meta({}) {
   return [
     { title: "Claude Yap - AI Podcast Generator" },
-    { name: "description", content: "Create AI-generated podcasts with Claude" },
+    {
+      name: "description",
+      content: "Create AI-generated podcasts with Claude",
+    },
   ];
 }
 
@@ -16,7 +19,7 @@ export default function Home() {
   useEffect(() => {
     const handleDocumentDragEnter = (e: DragEvent) => {
       e.preventDefault();
-      if (e.dataTransfer?.types.includes('Files')) {
+      if (e.dataTransfer?.types.includes("Files")) {
         setIsDraggingFile(true);
       }
     };
@@ -38,16 +41,16 @@ export default function Home() {
       setIsDraggingFile(false);
     };
 
-    document.addEventListener('dragenter', handleDocumentDragEnter);
-    document.addEventListener('dragleave', handleDocumentDragLeave);
-    document.addEventListener('dragover', handleDocumentDragOver);
-    document.addEventListener('drop', handleDocumentDrop);
+    document.addEventListener("dragenter", handleDocumentDragEnter);
+    document.addEventListener("dragleave", handleDocumentDragLeave);
+    document.addEventListener("dragover", handleDocumentDragOver);
+    document.addEventListener("drop", handleDocumentDrop);
 
     return () => {
-      document.removeEventListener('dragenter', handleDocumentDragEnter);
-      document.removeEventListener('dragleave', handleDocumentDragLeave);
-      document.removeEventListener('dragover', handleDocumentDragOver);
-      document.removeEventListener('drop', handleDocumentDrop);
+      document.removeEventListener("dragenter", handleDocumentDragEnter);
+      document.removeEventListener("dragleave", handleDocumentDragLeave);
+      document.removeEventListener("dragover", handleDocumentDragOver);
+      document.removeEventListener("drop", handleDocumentDrop);
     };
   }, []);
 
@@ -87,7 +90,9 @@ export default function Home() {
     } catch (error) {
       console.error("Error submitting request:", error);
     } finally {
-      setIsLoading(false);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 1000);
     }
   };
 
@@ -95,7 +100,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-950 py-12 px-4">
       {/* Full-screen drag overlay */}
       {isDraggingFile && (
-        <div 
+        <div
           className="fixed inset-0 bg-blue-500/30 backdrop-blur-sm z-50 flex items-center justify-center transition-all duration-300"
           onDragOver={handleDragOver}
           onDrop={(e) => {
@@ -105,8 +110,12 @@ export default function Home() {
         >
           <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl text-center max-w-md mx-auto transform transition-transform duration-300 scale-110 border-2 border-blue-400 dark:border-blue-500">
             <div className="text-6xl mb-4">📄</div>
-            <h3 className="text-xl font-bold mb-2 dark:text-white">Drop PDF Files Here</h3>
-            <p className="text-gray-600 dark:text-gray-300">Release to upload your PDF files</p>
+            <h3 className="text-xl font-bold mb-2 dark:text-white">
+              Drop PDF Files Here
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              Release to upload your PDF files
+            </p>
           </div>
         </div>
       )}
@@ -114,12 +123,17 @@ export default function Home() {
       <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
         <div className="bg-blue-600 dark:bg-blue-700 py-8 px-6 text-white">
           <h1 className="text-4xl font-bold text-center">Claude Yap</h1>
-          <h2 className="text-xl mt-2 text-center text-blue-100">AI Podcast Generator</h2>
+          <h2 className="text-xl mt-2 text-center text-blue-100">
+            AI Podcast Generator
+          </h2>
         </div>
-        
+
         <div className="p-8">
           <div className="mb-8">
-            <label htmlFor="prompt" className="block text-sm font-medium mb-2 dark:text-white">
+            <label
+              htmlFor="prompt"
+              className="block text-sm font-medium mb-2 dark:text-white"
+            >
               Describe the podcast you want to generate
             </label>
             <textarea
@@ -156,12 +170,16 @@ export default function Home() {
               >
                 Click to upload PDFs or drag and drop here
               </label>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">PDF files only</p>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                PDF files only
+              </p>
             </div>
 
             {files.length > 0 && (
               <div className="mt-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <h3 className="text-sm font-medium mb-3 dark:text-white">Uploaded files:</h3>
+                <h3 className="text-sm font-medium mb-3 dark:text-white">
+                  Uploaded files:
+                </h3>
                 <ul className="space-y-2">
                   {files.map((file, index) => (
                     <li
@@ -170,15 +188,26 @@ export default function Home() {
                     >
                       <div className="flex items-center">
                         <span className="text-lg mr-2">📄</span>
-                        <span className="text-black dark:text-white font-medium">{file.name}</span>
+                        <span className="text-black dark:text-white font-medium">
+                          {file.name}
+                        </span>
                       </div>
                       <button
                         onClick={() => removeFile(index)}
                         className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                         title="Remove file"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </button>
                     </li>
@@ -191,18 +220,34 @@ export default function Home() {
           <div className="text-center">
             <button
               onClick={handleSubmit}
-              disabled={isLoading || !prompt.trim()}
+              disabled={isLoading || prompt.trim().length === 0}
               className={`px-8 py-3 rounded-full font-medium text-lg shadow-lg transform transition-all duration-200 ${
-                isLoading || !prompt.trim()
+                isLoading || prompt.trim().length === 0
                   ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl active:scale-95"
               }`}
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Generating...
                 </span>
