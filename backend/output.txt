@@ -1,0 +1,47 @@
+# Presidential Computer Science Debate: Biden vs. Trump
+
+**Joe Biden:** Good evening, America. Tonight, we're going to discuss something vital for our nation's future - computer science concepts. These are the building blocks of our modern economy, folks. I've always said that when you give the American people the tools to succeed, there's nothing they can't accomplish.
+
+**Donald Trump:** Thank you. You know, I know computer science. I know it better than anyone. We're going to talk about tremendous concepts tonight - references, data structures, algorithms - all the things that make America's technology the greatest in the world. It's going to be huge.
+
+**Joe Biden:** Let's start with references in programming. In languages like OCaml, references allow us to modify values in place. They're created with the 'ref' operator, accessed with the '!' operator, and modified with the ':=' operator. This concept gives programmers flexibility when they need mutable state.
+
+**Donald Trump:** Look, references are important, no doubt about it. But the way the current administration handles data is terrible, just terrible. When you have a reference like "let x = ref 51" and then change it to 42, you need to know what you're doing. Many people don't track their references properly - it's a disaster waiting to happen.
+
+**Joe Biden:** Come on, man. This isn't about administration policies. It's about understanding core programming concepts. Binary sequencing is another important idea where you evaluate one expression, then another, and return the value of the second. This is how we build complex operations from simpler ones.
+
+**Donald Trump:** Binary sequencing, folks. It's like making a deal. First, you do one thing, then you do another thing. I've made the best deals, and I know about sequencing. But here's something that Obama and Biden never told you - when you have a function like that "remember" function in the slides, you need to initialize your references outside the function body, not inside!
+
+**Joe Biden:** You know, I actually agree with you on that technical point, Donald. The initialization of memory should happen outside the function body to persist between calls. That's a good catch.
+
+**Donald Trump:** Of course it is. I catch everything. I would have never made that mistake in my administration.
+
+**Joe Biden:** Moving on to mutable data structures, like mutable lists in OCaml. These allow us to modify lists in place, which can be more efficient than creating new copies each time. The mappend function shown in the slides is a good example of modifying a list as a side effect.
+
+**Donald Trump:** Mutable data structures are powerful, very powerful. But let me tell you, they're dangerous in the wrong hands. When you append two lists together using mappend, you're changing the original list! Many people don't understand this. It's like when I say we need to be careful with our data - nobody is more careful with data than me.
+
+**Joe Biden:** Let's talk about loops versus recursion. The slides show both while loops and for loops, which are imperative programming constructs. But they also show how to implement recursion in a tail-recursive way, which prevents stack overflows for large inputs.
+
+**Donald Trump:** Loops, recursion - I know them all. But tail recursion is special, very special. When you're not tail recursive, like in that first length function, you're wasting memory, wasting resources. My administration was always about efficiency. When you make a function tail recursive, you're making it great again!
+
+**Joe Biden:** On that point of efficiency, I think we can agree. Tail recursion optimizes memory usage by eliminating the need for additional stack frames. It's like building back better - improving existing structures rather than wasting resources.
+
+**Donald Trump:** Now let's talk about the queue with two stacks implementation. Very clever, very smart. You have one stack for the front, one for the reverse of the rear. When you need to dequeue and the front is empty, you flip the rear stack. Tremendously efficient algorithm.
+
+**Joe Biden:** The queue implementation is indeed elegant. It demonstrates how we can build complex data structures from simpler ones. Each operation - enqueue and dequeue - takes amortized constant time, making it efficient for most applications.
+
+**Donald Trump:** And search algorithms - depth-first search versus breadth-first search. It's all about which data structure you use for your pending collection. Use a stack, you get DFS. Use a queue, you get BFS. Simple. I've always said we need the right tool for the right job.
+
+**Joe Biden:** You're right about the relationship between the data structure and the search algorithm. DFS explores deeply before backtracking, while BFS explores all nodes at the current depth before going deeper. The choice depends on your application requirements.
+
+**Donald Trump:** And finally, Big-O notation - tremendously important. When I see algorithms that are O(n²) or O(n³), I say, "That's not going to work for large inputs." We need efficient algorithms, the most efficient. O(log n) is beautiful. O(1) is perfect.
+
+**Joe Biden:** Efficiency matters, especially as we deal with increasingly large datasets. Understanding computational complexity helps developers make informed choices. Whether it's O(n) linear time or O(log n) logarithmic time, these growth rates determine how our applications scale.
+
+**Donald Trump:** Look, in the end, computer science is about making smart choices. The smartest. Whether it's references, data structures, or algorithms, America needs to lead in technology. We can't let China beat us on this.
+
+**Joe Biden:** I think we can conclude by saying that computer science education is crucial for America's future. These concepts - from references to algorithms - are the foundation of our digital economy. By investing in STEM education, we ensure America remains competitive in the 21st century.
+
+**Donald Trump:** On that, Biden, we finally agree. Computer science education is vital. These CS51 students at Harvard are learning important concepts. But we need this education everywhere, not just at elite universities. Make Computer Science Great Again!
+
+**Joe Biden:** Thank you all for joining us tonight. Remember, there's nothing Americans can't accomplish when we work together and invest in our future. God bless America, and may God protect our troops.

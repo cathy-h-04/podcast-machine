@@ -15,13 +15,31 @@ export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const [mode, setMode] = useState<"none" | "research" | "summarize">("none");
+  const [mode, setMode] = useState<"none" | "research" | "summaritive">("none");
   const [researchTopic, setResearchTopic] = useState("");
+  const [podcastFormat, setPodcastFormat] = useState<
+    "debate" | "podcast" | "duck" | "none"
+  >("none");
+  const [peopleCount, setPeopleCount] = useState<
+    "one" | "two" | "three" | "none"
+  >("none");
+
+  // Form validation state
+  const [promptTouched, setPromptTouched] = useState(false);
+  const [researchTopicTouched, setResearchTopicTouched] = useState(false);
+
+  // Validation errors
+  const promptError = promptTouched && prompt.trim().length === 0;
+  const researchTopicError =
+    researchTopicTouched &&
+    researchTopic.trim().length === 0 &&
+    mode === "research";
 
   useEffect(() => {
     const handleDocumentDragEnter = (e: DragEvent) => {
       e.preventDefault();
-      if (e.dataTransfer?.types.includes("Files")) {
+      // Only show drag overlay if in summarize mode
+      if (e.dataTransfer?.types.includes("Files") && mode === "summaritive") {
         setIsDraggingFile(true);
       }
     };
@@ -54,10 +72,14 @@ export default function Home() {
       document.removeEventListener("dragover", handleDocumentDragOver);
       document.removeEventListener("drop", handleDocumentDrop);
     };
-  }, []);
+  }, [mode]); // Add mode as a dependency
 
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value);
+  };
+
+  const handlePromptBlur = () => {
+    setPromptTouched(true);
   };
 
   const handleResearchTopicChange = (
@@ -66,7 +88,21 @@ export default function Home() {
     setResearchTopic(e.target.value);
   };
 
-  const handleModeChange = (selectedMode: "research" | "summarize") => {
+  const handleResearchTopicBlur = () => {
+    setResearchTopicTouched(true);
+  };
+
+  const handlePodcastFormatChange = (
+    selectedFormat: "debate" | "podcast" | "duck"
+  ) => {
+    setPodcastFormat(selectedFormat);
+  };
+
+  const handlePeopleCountChange = (count: "one" | "two" | "three") => {
+    setPeopleCount(count);
+  };
+
+  const handleModeChange = (selectedMode: "research" | "summaritive") => {
     setMode(selectedMode);
     // Reset files when switching to research mode
     if (selectedMode === "research") {
@@ -84,11 +120,15 @@ export default function Home() {
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    const pdfFiles = droppedFiles.filter(
-      (file) => file.type === "application/pdf"
-    );
-    setFiles((prevFiles) => [...prevFiles, ...pdfFiles]);
+    // Only process dropped files if in summaritive mode
+    if (mode === "summaritive") {
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      const pdfFiles = droppedFiles.filter(
+        (file) => file.type === "application/pdf"
+      );
+      setFiles((prevFiles) => [...prevFiles, ...pdfFiles]);
+    }
+    setIsDraggingFile(false);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -102,17 +142,61 @@ export default function Home() {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      if (mode === "research") {
-        console.log("Sending data:", { prompt, researchTopic });
-      } else if (mode === "summarize") {
-        console.log("Sending data:", { prompt, files });
-      }
+      // First, convert any files to base64 format
+      const filePromises = files.map((file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            // The result will be a base64 string
+            const base64String = reader.result as string;
+            // Extract the base64 data without the prefix
+            const base64Data = base64String.split(",")[1];
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      });
+
+      // Wait for all files to be converted to base64
+      const fileData = await Promise.all(filePromises);
+
+      fetch("http://localhost:5111/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          context: prompt,
+          files: fileData, // Send the base64 encoded files
+          mode,
+          style: podcastFormat,
+          num_people: peopleCount,
+          content: researchTopic,
+        }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("Response data:", data);
+          // Handle the response data as needed
+          // For example, you might want to redirect the user or show a success message
+          // window.location.href = `/result/${data.id}`;
+          // Or show a success message
+          setIsLoading(false);
+          alert("Podcast generated successfully!");
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert("An error occurred while generating the podcast.");
+        });
     } catch (error) {
       console.error("Error submitting request:", error);
-    } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
+      setIsLoading(false);
     }
   };
 
@@ -154,21 +238,144 @@ export default function Home() {
               htmlFor="prompt"
               className="block text-sm font-medium mb-2 dark:text-white"
             >
-              Describe the podcast you want to generate
+              Describe the style of the audio file that you would like to have
+              generated <span className="text-red-500">*</span>
             </label>
             <textarea
               id="prompt"
               rows={5}
-              className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors dark:bg-gray-700 dark:text-white"
-              placeholder="E.g., Create a tech interview podcast about React 18 features with two hosts..."
+              className={`w-full p-4 border ${
+                promptError
+                  ? "border-red-500 dark:border-red-500"
+                  : "border-gray-300 dark:border-gray-600"
+              } rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors dark:bg-gray-700 dark:text-white`}
+              placeholder="E.g., I would like to have a podcast between Joe Biden and Donald Trump..."
               value={prompt}
               onChange={handlePromptChange}
+              onBlur={handlePromptBlur}
             />
+            {promptError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                Please describe the podcast you want to generate
+              </p>
+            )}
           </div>
 
           <div className="mb-8">
             <label className="block text-sm font-medium mb-2 dark:text-white">
-              Choose how Claude should create the podcast content
+              Choose a podcast format <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <button
+                onClick={() => handlePodcastFormatChange("debate")}
+                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
+                  podcastFormat === "debate"
+                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
+                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
+                }`}
+              >
+                <span className="text-3xl mb-2">🎭</span>
+                <span className="font-medium dark:text-white">
+                  Debate Style
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
+                  Two perspectives debating a topic
+                </span>
+              </button>
+
+              <button
+                onClick={() => handlePodcastFormatChange("podcast")}
+                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
+                  podcastFormat === "podcast"
+                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
+                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
+                }`}
+              >
+                <span className="text-3xl mb-2">🎙️</span>
+                <span className="font-medium dark:text-white">
+                  Podcast Style
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
+                  Conversational discussion format
+                </span>
+              </button>
+
+              <button
+                onClick={() => handlePodcastFormatChange("duck")}
+                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
+                  podcastFormat === "duck"
+                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
+                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
+                }`}
+              >
+                <span className="text-3xl mb-2">🦆</span>
+                <span className="font-medium dark:text-white">Duck Mode</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
+                  Teacher answering student questions
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <label className="block text-sm font-medium mb-2 dark:text-white">
+              How many people should be in the audio?{" "}
+              <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <button
+                onClick={() => handlePeopleCountChange("one")}
+                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
+                  peopleCount === "one"
+                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
+                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
+                }`}
+              >
+                <span className="text-3xl mb-2">👤</span>
+                <span className="font-medium dark:text-white">One Person</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
+                  Solo monologue or narration
+                </span>
+              </button>
+
+              <button
+                onClick={() => handlePeopleCountChange("two")}
+                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
+                  peopleCount === "two"
+                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
+                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
+                }`}
+              >
+                <span className="text-3xl mb-2">👤👤</span>
+                <span className="font-medium dark:text-white">Two People</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
+                  Dialogue between two individuals
+                </span>
+              </button>
+
+              <button
+                onClick={() => handlePeopleCountChange("three")}
+                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
+                  peopleCount === "three"
+                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
+                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
+                }`}
+              >
+                <span className="text-3xl mb-2">👤👤👤</span>
+                <span className="font-medium dark:text-white">
+                  Three People
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
+                  Group discussion or panel
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <label className="block text-sm font-medium mb-2 dark:text-white">
+              Choose how Claude should create the podcast content{" "}
+              <span className="text-red-500">*</span>
             </label>
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
               <button
@@ -187,9 +394,9 @@ export default function Home() {
               </button>
 
               <button
-                onClick={() => handleModeChange("summarize")}
+                onClick={() => handleModeChange("summaritive")}
                 className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
-                  mode === "summarize"
+                  mode === "summaritive"
                     ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
                     : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
                 }`}
@@ -211,23 +418,35 @@ export default function Home() {
                 htmlFor="research-topic"
                 className="block text-sm font-medium mb-2 dark:text-white"
               >
-                Describe the content you want Claude to research
+                Describe the content you want Claude to research{" "}
+                <span className="text-red-500">*</span>
               </label>
               <textarea
                 id="research-topic"
                 rows={4}
-                className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors dark:bg-gray-700 dark:text-white"
+                className={`w-full p-4 border ${
+                  researchTopicError
+                    ? "border-red-500 dark:border-red-500"
+                    : "border-gray-300 dark:border-gray-600"
+                } rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors dark:bg-gray-700 dark:text-white`}
                 placeholder="E.g., Research the latest developments in quantum computing, focusing on quantum error correction..."
                 value={researchTopic}
                 onChange={handleResearchTopicChange}
+                onBlur={handleResearchTopicBlur}
               />
+              {researchTopicError && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  Please describe what you want Claude to research
+                </p>
+              )}
             </div>
           )}
 
-          {mode === "summarize" && (
+          {mode === "summaritive" && (
             <div className="mb-8">
               <label className="block text-sm font-medium mb-2 dark:text-white">
-                Upload PDF files to summarize
+                Upload PDF files to summarize{" "}
+                <span className="text-red-500">*</span>
               </label>
               <div
                 className="border-dashed border-2 border-blue-300 dark:border-blue-500 rounded-lg p-8 text-center bg-blue-50 dark:bg-gray-700/50 hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors"
@@ -304,15 +523,19 @@ export default function Home() {
                 isLoading ||
                 prompt.trim().length === 0 ||
                 mode === "none" ||
+                podcastFormat === "none" ||
+                peopleCount === "none" ||
                 (mode === "research" && researchTopic.trim().length === 0) ||
-                (mode === "summarize" && files.length === 0)
+                (mode === "summaritive" && files.length === 0)
               }
               className={`px-8 py-3 rounded-full font-medium text-lg shadow-lg transform transition-all duration-200 ${
                 isLoading ||
                 prompt.trim().length === 0 ||
                 mode === "none" ||
+                podcastFormat === "none" ||
+                peopleCount === "none" ||
                 (mode === "research" && researchTopic.trim().length === 0) ||
-                (mode === "summarize" && files.length === 0)
+                (mode === "summaritive" && files.length === 0)
                   ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl active:scale-95"
               }`}

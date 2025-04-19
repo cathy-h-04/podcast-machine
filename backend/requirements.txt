@@ -1,6 +1,7 @@
 flask==2.3.3
 werkzeug==2.3.7
-anthropic==0.19.1
+anthropic
 PyPDF2==3.0.1
 python-dotenv==1.0.0
 gunicorn==21.2.0
+flask-cors==5.0.1

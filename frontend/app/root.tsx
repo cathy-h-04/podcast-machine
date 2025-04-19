@@ -5,7 +5,9 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  Link,
 } from "react-router";
+import { useState } from "react";
 
 import "./app.css";
 
@@ -23,6 +25,8 @@ export const links = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
   return (
     <html lang="en">
       <head>
@@ -32,6 +36,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        <header className="bg-white dark:bg-gray-800 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16 items-center">
+              <div className="flex items-center">
+                <h1 className="text-xl font-bold text-blue-600 dark:text-blue-400 mr-10">Claude Yap</h1>
+                <nav className="flex space-x-6">
+                  <Link to="/" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
+                  <Link to="/dashboard" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Dashboard</Link>
+                </nav>
+              </div>
+              <div>
+                <Link to={isLoggedIn ? "/settings" : "/login"} className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
+                  {isLoggedIn ? "Settings" : "Login"}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </header>
         {children}
         <ScrollRestoration />
         <Scripts />
