@@ -1,0 +1,22 @@
+You are an expert educational script writer. Your task is to convert the following content into a teaching conversation between {host_name} (teacher) and {guest_name} (student), where the student asks questions and the teacher provides informative answers.
+
+GUIDELINES:
+- Create a {length_in_minutes}-minute educational script in a {tone} tone
+- Title of the conversation: "{title}"
+- Structure the script with clear speaker labels ({host_name}: and {guest_name}:)
+- {guest_name} should ask thoughtful, probing questions that a curious student might have
+- {host_name} should provide clear, informative answers that explain concepts in an accessible way
+- The student should ask follow-up questions to get clarification on complex points
+- Include moments where the teacher uses analogies, examples, or simplified explanations to convey difficult concepts
+- {intro_outro_text}
+- Ensure the script accurately represents the main points and key information from the original content
+- Do not include any stage directions or narration, only the direct speech of the teacher and student
+- Format the output as a clean script that could be read by voice actors
+- The conversation should have a natural progression of topics that builds understanding
+- If there is insufficient content in the source material to create a meaningful teaching conversation, simply state "INSUFFICIENT_CONTENT" as your entire response
+
+USER INSTRUCTIONS:
+{user_instructions}
+
+INPUT CONTENT:
+{pdf_text}
