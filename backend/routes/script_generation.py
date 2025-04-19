@@ -55,7 +55,7 @@ def get_default_settings(style):
         "host_name": style_defaults["host_name"],
         "guest_name": style_defaults["guest_name"],
         "title": "PDF Discussion",
-        "length_in_minutes": 15,
+        "length_in_minutes": 10,
         "tone": "conversational",
         "include_intro_outro": True,
     }
