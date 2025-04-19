@@ -1,4 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+// Note: We're using motion components for animations
+// If framer-motion is not installed, you'll need to run: npm install framer-motion
+import { motion } from "framer-motion";
 
 export function meta({}) {
   return [
@@ -11,6 +14,7 @@ export function meta({}) {
 }
 
 export default function Home() {
+  // Main form state
   const [prompt, setPrompt] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,10 +27,18 @@ export default function Home() {
   const [peopleCount, setPeopleCount] = useState<
     "one" | "two" | "three" | "none"
   >("none");
-
+  
   // Form validation state
   const [promptTouched, setPromptTouched] = useState(false);
   const [researchTopicTouched, setResearchTopicTouched] = useState(false);
+  
+  // Refs for file input and drag area
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Animation states
+  const [isFormVisible, setIsFormVisible] = useState(true);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   // Validation errors
   const promptError = promptTouched && prompt.trim().length === 0;
@@ -141,6 +153,10 @@ export default function Home() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    
+    // Hide the form with animation
+    setIsFormVisible(false);
+    
     try {
       // First, convert any files to base64 format
       const filePromises = files.map((file) => {
@@ -160,119 +176,209 @@ export default function Home() {
 
       // Wait for all files to be converted to base64
       const fileData = await Promise.all(filePromises);
+      
+      // Create request data
+      const requestData = {
+        context: prompt,
+        files: fileData,
+        mode,
+        style: podcastFormat,
+        num_people: peopleCount,
+        content: researchTopic,
+      };
 
-      fetch("http://localhost:5111/generate", {
+      // Send the request
+      const response = await fetch("http://localhost:5111/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          context: prompt,
-          files: fileData, // Send the base64 encoded files
-          mode,
-          style: podcastFormat,
-          num_people: peopleCount,
-          content: researchTopic,
-        }),
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          console.log("Response data:", data);
-          // Handle the response data as needed
-          // For example, you might want to redirect the user or show a success message
-          // window.location.href = `/result/${data.id}`;
-          // Or show a success message
-          setIsLoading(false);
-          alert("Podcast generated successfully!");
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          alert("An error occurred while generating the podcast.");
-        });
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Response data:", data);
+      
+      // Show success message
+      setShowSuccessMessage(true);
+      
+      // Reset form after a delay
+      setTimeout(() => {
+        setIsLoading(false);
+        setIsFormVisible(true);
+        setShowSuccessMessage(false);
+      }, 3000);
+      
+      alert("Podcast generated successfully!");
     } catch (error) {
       console.error("Error submitting request:", error);
+      alert(`An error occurred: ${error instanceof Error ? error.message : String(error)}`);
       setIsLoading(false);
+      setIsFormVisible(true);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-950 py-12 px-4">
+    <div className="min-h-screen py-6 px-4 sm:px-6 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-950">
+      {/* Success message */}
+      {showSuccessMessage && (
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-indigo-600/20 backdrop-blur-sm z-50 flex items-center justify-center transition-all duration-300"
+        >
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }} 
+            animate={{ scale: 1, opacity: 1 }} 
+            transition={{ type: "spring", damping: 15 }}
+            className="glass-effect p-8 rounded-xl shadow-2xl text-center max-w-md mx-auto border-2 border-indigo-400 dark:border-indigo-500"
+          >
+            <div className="text-6xl mb-4 animate-pulse-slow">🎉</div>
+            <h3 className="text-xl font-bold mb-2 dark:text-white">
+              Podcast Generated Successfully!
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Your podcast has been downloaded to your device.
+            </p>
+            <div className="podcast-control-btn mx-auto">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+      
       {/* Full-screen drag overlay */}
       {isDraggingFile && (
-        <div
-          className="fixed inset-0 bg-blue-500/30 backdrop-blur-sm z-50 flex items-center justify-center transition-all duration-300"
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-indigo-500/30 backdrop-blur-sm z-50 flex items-center justify-center transition-all duration-300"
           onDragOver={handleDragOver}
           onDrop={(e) => {
             handleDrop(e);
             setIsDraggingFile(false);
           }}
+          ref={dragAreaRef}
         >
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl text-center max-w-md mx-auto transform transition-transform duration-300 scale-110 border-2 border-blue-400 dark:border-blue-500">
-            <div className="text-6xl mb-4">📄</div>
+          <motion.div 
+            initial={{ scale: 0.9, y: 10 }} 
+            animate={{ scale: 1, y: 0 }} 
+            transition={{ 
+              type: "spring", 
+              damping: 15,
+              repeat: Infinity,
+              repeatType: "reverse",
+              duration: 1.5
+            }}
+            className="glass-effect p-8 text-center max-w-md mx-auto border-2 border-indigo-400 dark:border-indigo-500 rounded-xl shadow-lg"
+          >
+            <div className="text-6xl mb-4 animate-pulse-slow">📄</div>
             <h3 className="text-xl font-bold mb-2 dark:text-white">
               Drop PDF Files Here
             </h3>
             <p className="text-gray-600 dark:text-gray-300">
               Release to upload your PDF files
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
-      <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-        <div className="bg-blue-600 dark:bg-blue-700 py-8 px-6 text-white">
-          <h1 className="text-4xl font-bold text-center">Claude Yap</h1>
-          <h2 className="text-xl mt-2 text-center text-blue-100">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-4xl mx-auto podcast-card overflow-visible"
+      >
+        <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 dark:from-indigo-700 dark:via-violet-700 dark:to-indigo-600 py-10 px-6 text-white rounded-t-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full opacity-10">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="absolute bottom-0 left-0">
+              <path fill="rgba(255,255,255,0.3)" fillOpacity="1" d="M0,192L48,176C96,160,192,128,288,122.7C384,117,480,139,576,165.3C672,192,768,224,864,213.3C960,203,1056,149,1152,133.3C1248,117,1344,139,1392,149.3L1440,160L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+            </svg>
+          </div>
+          <motion.div 
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", damping: 10 }}
+            className="flex items-center justify-center mb-6 relative z-10"
+          >
+            <div className="bg-white/20 p-4 rounded-full mr-4 shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13v8l6-4z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight">Claude Yap</h1>
+              <div className="h-1 w-20 bg-white/50 rounded-full mt-1"></div>
+            </div>
+          </motion.div>
+          <h2 className="text-lg sm:text-2xl text-center text-indigo-100 font-light relative z-10">
             AI Podcast Generator
           </h2>
         </div>
 
-        <div className="p-8">
+        <div className="p-6 sm:p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-b-xl">
           <div className="mb-8">
-            <label
-              htmlFor="prompt"
-              className="block text-sm font-medium mb-2 dark:text-white"
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.4 }}
             >
-              Describe the style of the audio file that you would like to have
-              generated <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              id="prompt"
-              rows={5}
-              className={`w-full p-4 border ${
-                promptError
-                  ? "border-red-500 dark:border-red-500"
-                  : "border-gray-300 dark:border-gray-600"
-              } rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors dark:bg-gray-700 dark:text-white`}
-              placeholder="E.g., I would like to have a podcast between Joe Biden and Donald Trump..."
-              value={prompt}
-              onChange={handlePromptChange}
-              onBlur={handlePromptBlur}
-            />
-            {promptError && (
-              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                Please describe the podcast you want to generate
-              </p>
-            )}
+              <label
+                htmlFor="prompt"
+                className="form-label flex items-center"
+              >
+                <span className="mr-2">🎧</span>
+                Describe the style of the audio file that you would like to have
+                generated <span className="text-red-500 ml-1">*</span>
+              </label>
+              <textarea
+                id="prompt"
+                rows={5}
+                className={`form-input ${
+                  promptError ? "ring-red-500 dark:ring-red-500" : ""
+                }`}
+                placeholder="E.g., I would like to have a podcast between Joe Biden and Donald Trump..."
+                value={prompt}
+                onChange={handlePromptChange}
+                onBlur={handlePromptBlur}
+              />
+              {promptError && (
+                <motion.p 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  Please describe the podcast you want to generate
+                </motion.p>
+              )}
+            </motion.div>
           </div>
 
           <div className="mb-8">
-            <label className="block text-sm font-medium mb-2 dark:text-white">
-              Choose a podcast format <span className="text-red-500">*</span>
-            </label>
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+            >
+              <label className="form-label flex items-center">
+                <span className="mr-2">🎭</span>
+                Choose a podcast format <span className="text-red-500 ml-1">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <button
                 onClick={() => handlePodcastFormatChange("debate")}
-                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
-                  podcastFormat === "debate"
-                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
-                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
-                }`}
+                className={`option-card flex flex-col items-center ${podcastFormat === "debate" ? "selected" : ""}`}
               >
                 <span className="text-3xl mb-2">🎭</span>
                 <span className="font-medium dark:text-white">
@@ -285,11 +391,7 @@ export default function Home() {
 
               <button
                 onClick={() => handlePodcastFormatChange("podcast")}
-                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
-                  podcastFormat === "podcast"
-                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
-                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
-                }`}
+                className={`option-card flex flex-col items-center ${podcastFormat === "podcast" ? "selected" : ""}`}
               >
                 <span className="text-3xl mb-2">🎙️</span>
                 <span className="font-medium dark:text-white">
@@ -302,11 +404,7 @@ export default function Home() {
 
               <button
                 onClick={() => handlePodcastFormatChange("duck")}
-                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
-                  podcastFormat === "duck"
-                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
-                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
-                }`}
+                className={`option-card flex flex-col items-center ${podcastFormat === "duck" ? "selected" : ""}`}
               >
                 <span className="text-3xl mb-2">🦆</span>
                 <span className="font-medium dark:text-white">Duck Mode</span>
@@ -315,21 +413,24 @@ export default function Home() {
                 </span>
               </button>
             </div>
+            </motion.div>
           </div>
 
           <div className="mb-8">
-            <label className="block text-sm font-medium mb-2 dark:text-white">
-              How many people should be in the audio?{" "}
-              <span className="text-red-500">*</span>
-            </label>
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+            >
+              <label className="form-label flex items-center">
+                <span className="mr-2">👥</span>
+                How many people should be in the audio?{" "}
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <button
                 onClick={() => handlePeopleCountChange("one")}
-                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
-                  peopleCount === "one"
-                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
-                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
-                }`}
+                className={`option-card flex flex-col items-center ${peopleCount === "one" ? "selected" : ""}`}
               >
                 <span className="text-3xl mb-2">👤</span>
                 <span className="font-medium dark:text-white">One Person</span>
@@ -340,11 +441,7 @@ export default function Home() {
 
               <button
                 onClick={() => handlePeopleCountChange("two")}
-                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
-                  peopleCount === "two"
-                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
-                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
-                }`}
+                className={`option-card flex flex-col items-center ${peopleCount === "two" ? "selected" : ""}`}
               >
                 <span className="text-3xl mb-2">👤👤</span>
                 <span className="font-medium dark:text-white">Two People</span>
@@ -355,11 +452,7 @@ export default function Home() {
 
               <button
                 onClick={() => handlePeopleCountChange("three")}
-                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
-                  peopleCount === "three"
-                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
-                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
-                }`}
+                className={`option-card flex flex-col items-center ${peopleCount === "three" ? "selected" : ""}`}
               >
                 <span className="text-3xl mb-2">👤👤👤</span>
                 <span className="font-medium dark:text-white">
@@ -370,21 +463,24 @@ export default function Home() {
                 </span>
               </button>
             </div>
+            </motion.div>
           </div>
 
           <div className="mb-8">
-            <label className="block text-sm font-medium mb-2 dark:text-white">
-              Choose how Claude should create the podcast content{" "}
-              <span className="text-red-500">*</span>
-            </label>
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.4 }}
+            >
+              <label className="form-label flex items-center">
+                <span className="mr-2">🤖</span>
+                Choose how Claude should create the podcast content{" "}
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-4">
               <button
                 onClick={() => handleModeChange("research")}
-                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
-                  mode === "research"
-                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
-                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
-                }`}
+                className={`option-card flex flex-col items-center ${mode === "research" ? "selected" : ""}`}
               >
                 <span className="text-3xl mb-2">🔍</span>
                 <span className="font-medium dark:text-white">AI Research</span>
@@ -395,11 +491,7 @@ export default function Home() {
 
               <button
                 onClick={() => handleModeChange("summaritive")}
-                className={`flex-1 p-4 rounded-lg flex flex-col items-center transition-colors ${
-                  mode === "summaritive"
-                    ? "bg-blue-100 dark:bg-blue-900 border-2 border-blue-500"
-                    : "bg-gray-50 dark:bg-gray-700 border-2 border-transparent hover:bg-blue-50 dark:hover:bg-gray-600"
-                }`}
+                className={`option-card flex flex-col items-center ${mode === "summaritive" ? "selected" : ""}`}
               >
                 <span className="text-3xl mb-2">📄</span>
                 <span className="font-medium dark:text-white">
@@ -410,79 +502,111 @@ export default function Home() {
                 </span>
               </button>
             </div>
+            </motion.div>
           </div>
 
           {mode === "research" && (
-            <div className="mb-8">
-              <label
-                htmlFor="research-topic"
-                className="block text-sm font-medium mb-2 dark:text-white"
-              >
-                Describe the content you want Claude to research{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="research-topic"
-                rows={4}
-                className={`w-full p-4 border ${
-                  researchTopicError
-                    ? "border-red-500 dark:border-red-500"
-                    : "border-gray-300 dark:border-gray-600"
-                } rounded-lg shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 transition-colors dark:bg-gray-700 dark:text-white`}
-                placeholder="E.g., Research the latest developments in quantum computing, focusing on quantum error correction..."
-                value={researchTopic}
-                onChange={handleResearchTopicChange}
-                onBlur={handleResearchTopicBlur}
-              />
-              {researchTopicError && (
-                <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                  Please describe what you want Claude to research
-                </p>
-              )}
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-8 overflow-hidden"
+            >
+              <div className="border-l-4 border-indigo-400 dark:border-indigo-600 pl-4 py-1">
+                <label
+                  htmlFor="research-topic"
+                  className="form-label flex items-center"
+                >
+                  <span className="mr-2">🔍</span>
+                  Describe the content you want Claude to research{" "}
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <textarea
+                  id="research-topic"
+                  rows={4}
+                  className={`form-input ${
+                    researchTopicError ? "ring-red-500 dark:ring-red-500" : ""
+                  }`}
+                  placeholder="E.g., Research the latest developments in quantum computing, focusing on quantum error correction..."
+                  value={researchTopic}
+                  onChange={handleResearchTopicChange}
+                  onBlur={handleResearchTopicBlur}
+                />
+                {researchTopicError && (
+                  <motion.p 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Please describe what you want Claude to research
+                  </motion.p>
+                )}
+              </div>
+            </motion.div>
           )}
 
           {mode === "summaritive" && (
-            <div className="mb-8">
-              <label className="block text-sm font-medium mb-2 dark:text-white">
-                Upload PDF files to summarize{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <div
-                className="border-dashed border-2 border-blue-300 dark:border-blue-500 rounded-lg p-8 text-center bg-blue-50 dark:bg-gray-700/50 hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors"
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-              >
-                <div className="text-4xl mb-3">📄</div>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
-                >
-                  Click to upload PDFs or drag and drop here
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-8 overflow-hidden"
+            >
+              <div className="border-l-4 border-indigo-400 dark:border-indigo-600 pl-4 py-1">
+                <label className="form-label flex items-center">
+                  <span className="mr-2">📄</span>
+                  Upload PDF files to summarize{" "}
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  PDF files only
-                </p>
-              </div>
+                <div
+                  className="border-dashed border-2 border-indigo-300 dark:border-indigo-500 rounded-lg p-8 text-center bg-indigo-50/80 dark:bg-gray-700/50 hover:bg-indigo-100/80 dark:hover:bg-gray-700 transition-all duration-300 transform hover:scale-[1.01] cursor-pointer shadow-sm hover:shadow-md"
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="text-5xl mb-3 animate-pulse-slow">📄</div>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden"
+                    ref={fileInputRef}
+                  />
+                  <div className="cursor-pointer text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
+                    Click to upload PDFs or drag and drop here
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    PDF files only
+                  </p>
+                </div>
 
               {files.length > 0 && (
-                <div className="mt-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                  <h3 className="text-sm font-medium mb-3 dark:text-white">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 glass-effect rounded-lg p-4 border border-indigo-100 dark:border-indigo-800/30"
+                >
+                  <h3 className="text-sm font-medium mb-3 dark:text-white flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                    </svg>
                     Uploaded files:
                   </h3>
                   <ul className="space-y-2">
                     {files.map((file, index) => (
-                      <li
+                      <motion.li
                         key={index}
-                        className="flex justify-between items-center p-3 bg-white dark:bg-gray-700 rounded-lg shadow-sm"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex justify-between items-center p-3 bg-white/80 dark:bg-gray-700/80 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600/30 hover:shadow-md transition-all duration-200"
                       >
                         <div className="flex items-center">
                           <span className="text-lg mr-2">📄</span>
@@ -491,8 +615,11 @@ export default function Home() {
                           </span>
                         </div>
                         <button
-                          onClick={() => removeFile(index)}
-                          className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(index);
+                          }}
+                          className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-200 transform hover:scale-110"
                           title="Remove file"
                         >
                           <svg
@@ -508,72 +635,89 @@ export default function Home() {
                             />
                           </svg>
                         </button>
-                      </li>
+                      </motion.li>
                     ))}
                   </ul>
-                </div>
+                </motion.div>
               )}
-            </div>
+              </div>
+            </motion.div>
           )}
 
-          <div className="text-center">
-            <button
-              onClick={handleSubmit}
-              disabled={
-                isLoading ||
-                prompt.trim().length === 0 ||
-                mode === "none" ||
-                podcastFormat === "none" ||
-                peopleCount === "none" ||
-                (mode === "research" && researchTopic.trim().length === 0) ||
-                (mode === "summaritive" && files.length === 0)
-              }
-              className={`px-8 py-3 rounded-full font-medium text-lg shadow-lg transform transition-all duration-200 ${
-                isLoading ||
-                prompt.trim().length === 0 ||
-                mode === "none" ||
-                podcastFormat === "none" ||
-                peopleCount === "none" ||
-                (mode === "research" && researchTopic.trim().length === 0) ||
-                (mode === "summaritive" && files.length === 0)
-                  ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl active:scale-95"
-              }`}
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Generating...
-                </span>
-              ) : (
-                "Generate Podcast"
-              )}
-            </button>
-            <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-              Powered by Claude AI
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+            className="text-center mt-12"
+          >
+            <div className="relative inline-block">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+              <button
+                onClick={handleSubmit}
+                disabled={
+                  isLoading ||
+                  prompt.trim().length === 0 ||
+                  mode === "none" ||
+                  podcastFormat === "none" ||
+                  peopleCount === "none" ||
+                  (mode === "research" && researchTopic.trim().length === 0) ||
+                  (mode === "summaritive" && files.length === 0)
+                }
+                className={`btn-primary relative ${
+                  isLoading ||
+                  prompt.trim().length === 0 ||
+                  mode === "none" ||
+                  podcastFormat === "none" ||
+                  peopleCount === "none" ||
+                  (mode === "research" && researchTopic.trim().length === 0) ||
+                  (mode === "summaritive" && files.length === 0)
+                    ? "btn-disabled"
+                    : ""
+                }`}
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Generating...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                    </svg>
+                    Generate Podcast
+                  </span>
+                )}
+              </button>
+            </div>
+            <p className="mt-6 text-sm text-gray-500 dark:text-gray-400 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Powered by <span className="text-indigo-600 dark:text-indigo-400 font-medium ml-1">Claude AI</span>
             </p>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
