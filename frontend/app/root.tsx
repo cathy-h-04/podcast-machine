@@ -121,13 +121,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   )}
                 </button>
                 <Link
-                  to={isLoggedIn ? "/profile" : "/login"}
+                  to={isLoggedIn ? "/" : "/login"}
                   className="hidden md:block text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium"
                   onClick={
                     isLoggedIn ? () => handleLoginStatus(false) : undefined
                   }
                 >
-                  {isLoggedIn ? "Profile" : "Login"}
+                  {isLoggedIn ? "Logout" : "Login"}
                 </Link>
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -172,7 +172,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   Dashboard
                 </Link>
                 <Link
-                  to={isLoggedIn ? "/settings" : "/login"}
+                  to={isLoggedIn ? "/" : "/login"}
                   className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   onClick={() => {
                     setIsMobileMenuOpen(false);

@@ -14,10 +14,8 @@ The application supports various podcast formats (debate, conversation, educatio
 - **Multiple Podcast Formats**: Choose between debate-style, conversational podcast, or educational formats
 - **Customizable Participants**: Select between one, two, or three speakers for your podcast
 - **PDF Processing**: Upload PDF documents for Claude to analyze and discuss
-- **User Authentication**: Secure registration and login system to manage your podcasts
+- **User Authentication**: Simple login/logout functionality
 - **Audio Generation**: Convert generated scripts into lifelike audio using text-to-speech technology
-- **User Profiles**: Save preferences and access your podcast history
-- **Prompt Management**: Store and reuse custom prompts for consistent podcast styles
 
 ## 🚀 Getting Started
 
@@ -82,7 +80,6 @@ claude-yap/
 │   │   ├── auth.py          # Authentication endpoints
 │   │   ├── pdf_processing.py # PDF handling and script generation
 │   │   ├── podcasts.py      # Podcast management
-│   │   ├── prompts.py       # User prompts management
 │   │   └── script_generation.py # Script generation logic
 │   ├── services/            # External service integrations
 │   │   ├── claude_client.py # Claude API client
