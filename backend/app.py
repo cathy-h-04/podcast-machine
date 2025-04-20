@@ -32,6 +32,10 @@ app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB limit
 def generate_script():
     return pdf_processing.generate_script_route()
 
+@app.route("/api/script-progress/<process_id>", methods=["GET"])
+def get_script_progress(process_id):
+    return pdf_processing.get_script_progress_route(process_id)
+
 
 # Authentication routes
 @app.route("/api/register", methods=["POST"])
