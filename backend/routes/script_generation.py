@@ -1,5 +1,6 @@
 # routes/script_generation.py
 import os
+import base64
 import anthropic
 from dotenv import load_dotenv
 
@@ -47,31 +48,35 @@ def load_prompt_template(style="podcast"):
         raise Exception(f"Error loading system prompt template: {str(e)}")
 
 
-def get_default_settings(style):
+def get_default_settings(style, filename=None):
     """Get default settings for display in the response"""
     style_defaults = STYLE_DEFAULTS.get(style.lower(), STYLE_DEFAULTS["podcast"])
+    
+    # Create title from filename if available
+    if filename:
+        title = f"{filename} Discussion"
+    else:
+        title = "Podcast Discussion"
 
     return {
         "host_name": style_defaults["host_name"],
         "guest_name": style_defaults["guest_name"],
-        "title": "PDF Discussion",
+        "title": title,
         "length_in_minutes": 10,
         "tone": "conversational",
         "include_intro_outro": True,
     }
 
 
-def generate_script(pdf_texts, style, user_message=""):
-    """Generate a podcast, debate, or teaching script from PDF texts using Claude"""
+def generate_script(pdf_contents, style, user_message="", filename=None):
+    """Generate a podcast, debate, or teaching script from PDFs using Claude's native PDF handling"""
+    print("=== Starting generate_script ===")
+    print("PDF contents:", pdf_contents)
+    print("Style:", style)
+    print("Filename:", filename)
+    
     # Get default settings for the style (for including in the response)
-    settings = get_default_settings(style)
-
-    # Combine PDF texts (with markers to separate different PDFs)
-    combined_text = ""
-    for i, text in enumerate(pdf_texts):
-        if i > 0:
-            combined_text += "\n\n--- NEW DOCUMENT ---\n\n"
-        combined_text += text
+    settings = get_default_settings(style, filename)
 
     # Load the appropriate prompt template
     system_prompt_template = load_prompt_template(style)
@@ -88,7 +93,7 @@ If any preferences are not specified, use reasonable defaults.
     else:
         user_preferences = "No specific preferences provided. Use default settings."
 
-    # Fill in the template
+    # Prepare system prompt without PDF content (will be sent as attachments)
     system_prompt = system_prompt_template.format(
         host_name="{host_name}",
         guest_name="{guest_name}",
@@ -96,11 +101,41 @@ If any preferences are not specified, use reasonable defaults.
         length_in_minutes="{length_in_minutes}",
         tone="{tone}",
         intro_outro_text="{intro_outro_text}",
-        pdf_text=combined_text,
+        pdf_text="[PDF content will be analyzed directly]",
         user_instructions=user_preferences,
     )
 
-    # Call Claude API
+    # Extract file paths from pdf_contents
+    pdf_files = []
+    for i, pdf_content in enumerate(pdf_contents):
+        print(f"Processing PDF {i+1} for Claude API: {pdf_content['filename']}")
+        try:
+            # Check if the type is correct
+            if pdf_content["type"] != "document":
+                print(f"Warning: PDF content type is {pdf_content['type']}, changing to 'document'")
+                pdf_content["type"] = "document"
+                
+            with open(pdf_content["path"], "rb") as f:
+                file_data = f.read()
+                print(f"Read {len(file_data)} bytes from {pdf_content['filename']}")
+                
+                pdf_files.append(
+                    {
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "application/pdf",
+                            "data": base64.b64encode(file_data).decode("utf-8")
+                        }
+                    }
+                )
+        except Exception as e:
+            print(f"Error processing PDF for Claude API: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            raise
+
+    # Call Claude API with multimodal content
     response = claude_client.messages.create(
         model="claude-3-7-sonnet-20250219",  # use updated Claude 3.7 Sonnet model
         max_tokens=4000,
@@ -108,7 +143,13 @@ If any preferences are not specified, use reasonable defaults.
         messages=[
             {
                 "role": "user",
-                "content": "Please convert this content to a script according to my instructions.",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Please analyze these PDFs and convert the content to a script according to my instructions."
+                    },
+                    *pdf_files
+                ]
             }
         ],
     )
@@ -116,11 +157,20 @@ If any preferences are not specified, use reasonable defaults.
     # Extract the generated script
     generated_script = response.content[0].text
 
+    # Determine output filename
+    if filename:
+        output_filename = f"{filename}.txt"
+    else:
+        output_filename = "output.txt"
+        
+    # Log how many PDFs were processed
+    print(f"Processed {len(pdf_files)} PDFs for script generation")
+
     # Log script to file
-    with open("output.txt", "w", encoding="utf-8") as f:
+    with open(output_filename, "w", encoding="utf-8") as f:
         f.write(generated_script)
 
     # Also print to console
-    print("Generated script written to output.txt")
+    print(f"Generated script written to {output_filename}")
 
     return generated_script, settings
