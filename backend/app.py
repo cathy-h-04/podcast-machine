@@ -8,11 +8,11 @@ Only processes 'summaritive' mode requests.
 Includes user authentication with registration and login functionality.
 """
 
-from flask import Flask
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
-from routes import pdf_processing, auth, podcasts, audio_generation
+from routes import pdf_processing, auth, podcasts, audio_generation, cover_art_generation
 
 # Load environment variables from .env file
 load_dotenv()
@@ -68,6 +68,32 @@ def delete_podcast(podcast_id):
     return podcasts.delete_podcast_route(podcast_id)
 
 
+@app.route("/api/podcasts/<podcast_id>/title", methods=["PUT"])
+def update_podcast_title(podcast_id):
+    data = request.get_json()
+    new_title = data.get("title")
+    
+    if not new_title:
+        return jsonify({"error": "Title is required"}), 400
+        
+    updated_podcast = podcasts.update_podcast_title(podcast_id, new_title)
+    
+    if not updated_podcast:
+        return jsonify({"error": "Podcast not found"}), 404
+        
+    return jsonify({"success": True, "podcast": updated_podcast})
+
+
+@app.route("/api/podcasts/<podcast_id>/listened", methods=["PUT"])
+def toggle_podcast_listened(podcast_id):
+    updated_podcast = podcasts.toggle_podcast_listened(podcast_id)
+    
+    if not updated_podcast:
+        return jsonify({"error": "Podcast not found"}), 404
+        
+    return jsonify({"success": True, "podcast": updated_podcast})
+
+
 # Audio generation routes
 @app.route("/api/generate-audio", methods=["POST"])
 def generate_audio():
@@ -77,6 +103,11 @@ def generate_audio():
 @app.route("/static/audio/<filename>", methods=["GET"])
 def get_audio(filename):
     return audio_generation.get_audio_route(filename)
+
+# Cover Art Generation
+@app.route("/api/generate-cover", methods=["POST"])
+def generate_cover():
+    return cover_art_generation.generate_cover_art()
 
 
 if __name__ == "__main__":

@@ -75,6 +75,8 @@ def save_podcast(title, format, people_count, script, audio_url=None):
         "createdAt": datetime.now().isoformat(),
         "duration": calculate_duration(script),  # Calculate based on script length
         "audioUrl": audio_url or "#",  # Placeholder if no audio URL yet
+        "cover_url": None,  # Placeholder for cover art URL
+        "listened": False,
         "script": script,
     }
 
@@ -122,12 +124,62 @@ def delete_podcast_route(podcast_id):
 def update_podcast_audio(podcast_id, audio_url):
     """Update a podcast with an audio URL"""
     podcasts = _load_podcasts()
+    podcast = next((p for p in podcasts if p["id"] == podcast_id), None)
 
-    # Find the podcast by ID
-    for podcast in podcasts:
-        if podcast["id"] == podcast_id:
-            podcast["audioUrl"] = audio_url
-            _save_podcasts(podcasts)
-            return True
+    if not podcast:
+        return None
 
-    return False
+    # Update the audio URL
+    podcast["audioUrl"] = audio_url
+    _save_podcasts(podcasts)
+
+    return podcast
+
+
+def update_podcast_cover(podcast_id, cover_url):
+    """Update a podcast with a cover art URL"""
+    podcasts = _load_podcasts()
+    podcast = next((p for p in podcasts if p["id"] == podcast_id), None)
+
+    if not podcast:
+        return None
+
+    # Update the cover URL
+    podcast["cover_url"] = cover_url
+    _save_podcasts(podcasts)
+
+    return podcast
+
+
+def update_podcast_title(podcast_id, new_title):
+    """Update a podcast's title"""
+    podcasts = _load_podcasts()
+    podcast = next((p for p in podcasts if p["id"] == podcast_id), None)
+
+    if not podcast:
+        return None
+
+    # Update the title
+    podcast["title"] = new_title
+    _save_podcasts(podcasts)
+
+    return podcast
+
+
+def toggle_podcast_listened(podcast_id):
+    """Toggle the listened status of a podcast"""
+    podcasts = _load_podcasts()
+    podcast = next((p for p in podcasts if p["id"] == podcast_id), None)
+
+    if not podcast:
+        return None
+
+    # If the podcast doesn't have a listened field yet, add it
+    if "listened" not in podcast:
+        podcast["listened"] = False
+
+    # Toggle the listened status
+    podcast["listened"] = not podcast["listened"]
+    _save_podcasts(podcasts)
+
+    return podcast
