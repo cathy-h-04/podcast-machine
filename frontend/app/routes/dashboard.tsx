@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { motion } from "framer-motion";
-import { DailyProvider } from "@daily-co/daily-react";
-import { CallScreen } from "../../components/CallScreen";
 
 // Types for our podcast data
 type Podcast = {
@@ -52,11 +50,7 @@ export default function Dashboard() {
     text: string;
   } | null>(null);
   const [showVideoConfirmation, setShowVideoConfirmation] = useState(false);
-  const [showVideoInterface, setShowVideoInterface] = useState(false);
   const [podcastForVideo, setPodcastForVideo] = useState<Podcast | null>(null);
-  const [conversation, setConversation] = useState<{
-    conversation_url: string;
-  } | null>(null);
 
   // Fetch podcasts from the server
   useEffect(() => {
@@ -400,23 +394,53 @@ export default function Dashboard() {
   };
 
   // Join video conference
-  const joinVideoConference = () => {
-    // In a real implementation, you would get this URL from your backend
-    // For now, we'll create a mock URL using the podcast ID
-    if (podcastForVideo) {
-      setConversation({
-        conversation_url: `https://your-daily-domain.daily.co/${podcastForVideo.id}`,
-      });
-      setShowVideoInterface(true);
-      setShowVideoConfirmation(false);
-    }
-  };
+  const joinVideoConference = async () => {
+    try {
+      // Start a conversation with the replica API
+      if (podcastForVideo) {
+        try {
+          // Get token from localStorage
+          const token = localStorage.getItem("token");
 
-  // End video conference
-  const endVideoConference = () => {
-    setShowVideoInterface(false);
-    setPodcastForVideo(null);
-    setConversation(null);
+          const response = await fetch(
+            "http://localhost:5111/api/conversations",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ podcast_id: podcastForVideo.id }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to start conversation with replica");
+          }
+
+          const data = await response.json();
+
+          if (data.success && data.conversation_url) {
+            // Open the conversation URL in a new tab
+            console.log(data.conversation_url);
+            window.open(data.conversation_url, "_blank");
+            setShowVideoConfirmation(false);
+          } else {
+            throw new Error("Invalid response from replica service");
+          }
+        } catch (error) {
+          console.error("Error starting conversation:", error);
+          setError(
+            "Failed to start conversation with the audio replica. Please try again."
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Error accessing media devices:", err);
+      setError(
+        "Please allow access to camera and microphone to join the video conference."
+      );
+    }
   };
 
   // Get icon for podcast format
@@ -692,6 +716,7 @@ export default function Dashboard() {
                           download
                           className="podcast-control-btn-sm ml-2 flex items-center justify-center"
                           aria-label="Download"
+                          target="_blank"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -941,28 +966,6 @@ export default function Dashboard() {
                 Join
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Video Conference Interface */}
-      {showVideoInterface && podcastForVideo && conversation && (
-        <div className="fixed inset-0 bg-black bg-opacity-95 z-50 flex flex-col">
-          <div className="p-4 flex justify-between items-center bg-gray-800">
-            <div className="flex items-center">
-              <span className="text-white font-medium">
-                Video Discussion: {podcastForVideo.title}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex-1">
-            <DailyProvider>
-              <CallScreen
-                conversation={conversation}
-                handleEnd={endVideoConference}
-              />
-            </DailyProvider>
           </div>
         </div>
       )}

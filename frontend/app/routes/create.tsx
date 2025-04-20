@@ -17,7 +17,7 @@ export function meta({}) {
 export default function Home() {
   // Initialize navigation
   const navigate = useNavigate();
-  
+
   // Main form state
   const [prompt, setPrompt] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -28,7 +28,7 @@ export default function Home() {
   const [podcastFormat, setPodcastFormat] = useState<
     "debate" | "podcast" | "duck" | "none"
   >("none");
-  
+
   // Progress tracking state
   const [currentPodcastId, setCurrentPodcastId] = useState<string | null>(null);
   const [currentProcessId, setCurrentProcessId] = useState<string | null>(null);
@@ -202,7 +202,7 @@ export default function Home() {
       status: "processing",
       step: "preparation",
       progress: 5,
-      message: "Preparing files and inputs..."
+      message: "Preparing files and inputs...",
     });
     setCurrentPodcastId(null);
 
@@ -233,7 +233,7 @@ export default function Home() {
         status: "processing",
         step: "script_generation",
         progress: 15,
-        message: "Generating podcast script..."
+        message: "Generating podcast script...",
       });
 
       // Create request data
@@ -264,7 +264,7 @@ export default function Home() {
 
       const data = await response.json();
       console.log("Response data:", data);
-      
+
       // If we have a process_id from the response, start polling for script generation progress
       if (data.process_id) {
         setCurrentProcessId(data.process_id);
@@ -275,7 +275,8 @@ export default function Home() {
           status: "processing",
           step: "script_complete",
           progress: 40,
-          message: "Script generated successfully. Preparing audio generation..."
+          message:
+            "Script generated successfully. Preparing audio generation...",
         });
       }
 
@@ -363,7 +364,10 @@ export default function Home() {
           );
 
           if (!coverResponse.ok) {
-            console.error("Error generating cover art:", coverResponse.statusText);
+            console.error(
+              "Error generating cover art:",
+              coverResponse.statusText
+            );
           } else {
             const coverData = await coverResponse.json();
             console.log("Cover art generated successfully:", coverData);
@@ -415,24 +419,35 @@ export default function Home() {
 
     // Only set up polling if it's active
     if (progressPollingActive) {
-      console.log("Setting up progress polling", { currentProcessId, currentPodcastId });
-      
+      console.log("Setting up progress polling", {
+        currentProcessId,
+        currentPodcastId,
+      });
+
       // Script generation progress polling
       if (currentProcessId && !currentPodcastId) {
-        console.log("Starting script progress polling for process ID:", currentProcessId);
-        
+        console.log(
+          "Starting script progress polling for process ID:",
+          currentProcessId
+        );
+
         const pollScriptProgress = async () => {
           try {
-            const response = await fetch(`/api/script-progress/${currentProcessId}`);
+            const response = await fetch(
+              `/api/script-progress/${currentProcessId}`
+            );
             if (response.ok) {
               const progressData = await response.json();
               console.log("Script progress update:", progressData);
               setProgressStatus(progressData);
 
               // If script generation is complete or has an error, stop polling
-              if (progressData.status === "complete" || progressData.status === "error") {
+              if (
+                progressData.status === "complete" ||
+                progressData.status === "error"
+              ) {
                 setProgressPollingActive(false);
-                
+
                 if (progressData.status === "error") {
                   setIsLoading(false);
                   setIsFormVisible(true);
@@ -448,29 +463,37 @@ export default function Home() {
             console.error("Error polling for script progress:", error);
           }
         };
-        
+
         // Poll immediately
         pollScriptProgress();
         // Then set up interval
         intervalId = setInterval(pollScriptProgress, 2000);
       }
-      
+
       // Audio generation progress polling
       else if (currentPodcastId) {
-        console.log("Starting audio progress polling for podcast ID:", currentPodcastId);
-        
+        console.log(
+          "Starting audio progress polling for podcast ID:",
+          currentPodcastId
+        );
+
         const pollAudioProgress = async () => {
           try {
-            const response = await fetch(`/api/audio-progress/${currentPodcastId}`);
+            const response = await fetch(
+              `/api/audio-progress/${currentPodcastId}`
+            );
             if (response.ok) {
               const progressData = await response.json();
               console.log("Audio progress update:", progressData);
               setProgressStatus(progressData);
 
               // If the process is complete or has an error, stop polling
-              if (progressData.status === "complete" || progressData.status === "error") {
+              if (
+                progressData.status === "complete" ||
+                progressData.status === "error"
+              ) {
                 setProgressPollingActive(false);
-                
+
                 if (progressData.status === "complete") {
                   setIsLoading(false);
                   // Navigate to the podcast page
@@ -488,7 +511,7 @@ export default function Home() {
             console.error("Error polling for audio progress:", error);
           }
         };
-        
+
         // Poll immediately
         pollAudioProgress();
         // Then set up interval
@@ -503,7 +526,14 @@ export default function Home() {
         clearInterval(intervalId);
       }
     };
-  }, [progressPollingActive, currentPodcastId, currentProcessId, navigate, setIsLoading, setIsFormVisible]);
+  }, [
+    progressPollingActive,
+    currentPodcastId,
+    currentProcessId,
+    navigate,
+    setIsLoading,
+    setIsFormVisible,
+  ]);
 
   return (
     <div className="min-h-screen py-6 px-4 sm:px-6 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-950">
@@ -541,7 +571,7 @@ export default function Home() {
                 your dashboard.
               </p>
               <a
-                href="/dashboard"
+                href="/"
                 className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Go to Dashboard

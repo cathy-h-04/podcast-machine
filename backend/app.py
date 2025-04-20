@@ -18,13 +18,14 @@ from routes import (
     podcasts,
     audio_generation,
     cover_art_generation,
+    replica,
 )
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Create Flask app
-app = Flask(__name__, static_folder="static", static_url_path="/static")
+app = Flask(__name__, static_folder="static")
 
 # Configure CORS to allow requests from localhost:5173
 CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
@@ -125,6 +126,32 @@ def get_audio_progress(podcast_id):
 @app.route("/api/generate-cover", methods=["POST"])
 def generate_cover():
     return cover_art_generation.generate_cover_art()
+
+
+# Replica Conversation Routes
+@app.route("/api/conversations", methods=["POST"])
+def start_conversation():
+    return replica.start_conversation_route()
+
+
+@app.route("/api/conversations", methods=["GET"])
+def list_conversations():
+    return replica.list_conversations_route()
+
+
+@app.route("/api/conversations/<conversation_id>", methods=["GET"])
+def get_conversation(conversation_id):
+    return replica.get_conversation_route(conversation_id)
+
+
+@app.route("/api/conversations/<conversation_id>/end", methods=["POST"])
+def end_conversation(conversation_id):
+    return replica.end_conversation_route(conversation_id)
+
+
+@app.route("/api/conversations/<conversation_id>", methods=["DELETE"])
+def delete_conversation(conversation_id):
+    return replica.delete_conversation_route(conversation_id)
 
 
 if __name__ == "__main__":
