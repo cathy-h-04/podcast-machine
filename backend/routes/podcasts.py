@@ -41,7 +41,87 @@ def _save_podcasts(podcasts):
 def get_podcasts_route():
     """API route to get all podcasts"""
     podcasts = _load_podcasts()
-    return jsonify({"podcasts": podcasts})
+    
+    # Get list of available audio files
+    audio_dir = os.path.join(BASE_DIR, "static", "audio")
+    all_files = os.listdir(audio_dir) if os.path.exists(audio_dir) else []
+    
+    # Filter out system files and non-audio files
+    available_files = [f for f in all_files if not f.startswith('.') and f.lower().endswith(('.mp3', '.wav', '.ogg', '.m4a'))]
+    print(f"Available audio files: {available_files}")
+    
+    # If we have audio files but no podcasts with valid audio URLs, create entries for them
+    if available_files:
+        # Check if we need to create new podcast entries for audio files
+        existing_audio_files = set()
+        for podcast in podcasts:
+            audio_url = podcast.get("audioUrl")
+            if audio_url and audio_url.startswith("/static/audio/"):
+                audio_filename = audio_url.split("/")[-1]
+                base_name = os.path.splitext(audio_filename)[0]
+                # Add both the exact filename and the base name to our set
+                existing_audio_files.add(audio_filename)
+                existing_audio_files.add(base_name)
+        
+        # Create podcasts for audio files that don't have entries
+        for audio_file in available_files:
+            base_name = os.path.splitext(audio_file)[0]
+            # If neither the exact filename nor the base name exists in any podcast
+            if audio_file not in existing_audio_files and base_name not in existing_audio_files:
+                # Create a new podcast entry
+                new_podcast = {
+                    "id": str(uuid.uuid4()),
+                    "title": f"Audio {base_name}",
+                    "format": "podcast",  # Default format
+                    "createdAt": datetime.now().isoformat(),
+                    "duration": 300,  # Default duration (5 minutes)
+                    "audioUrl": f"/static/audio/{audio_file}",
+                    "cover_url": None,
+                    "listened": False
+                }
+                podcasts.append(new_podcast)
+                print(f"Created new podcast entry for audio file: {audio_file}")
+    
+    # Update existing podcasts to point to valid audio files
+    for podcast in podcasts:
+        audio_url = podcast.get("audioUrl")
+        if not audio_url or audio_url == "#":
+            continue
+            
+        if audio_url.startswith("/static/audio/"):
+            audio_filename = audio_url.split("/")[-1]
+            audio_path = os.path.join(BASE_DIR, "static", "audio", audio_filename)
+            
+            # If the exact file doesn't exist, try to find a matching file
+            if not os.path.exists(audio_path):
+                base_name = os.path.splitext(audio_filename)[0]
+                matching_files = [f for f in available_files if f.startswith(base_name)]
+                
+                if matching_files:
+                    # Update to the first matching file
+                    podcast["audioUrl"] = f"/static/audio/{matching_files[0]}"
+                    print(f"Updated podcast audio URL to: {podcast['audioUrl']}")
+    
+    # Save any updates we made to the podcasts
+    _save_podcasts(podcasts)
+    
+    # Filter out podcasts with invalid audio files (like .DS_Store)
+    valid_podcasts = []
+    for podcast in podcasts:
+        audio_url = podcast.get("audioUrl")
+        if audio_url and audio_url.startswith("/static/audio/"):
+            filename = audio_url.split("/")[-1]
+            # Only include podcasts with valid audio file extensions
+            if not filename.startswith('.') and any(filename.lower().endswith(ext) for ext in ('.mp3', '.wav', '.ogg', '.m4a')):
+                valid_podcasts.append(podcast)
+        else:
+            # Keep podcasts with external URLs
+            valid_podcasts.append(podcast)
+    
+    # Save the filtered podcasts list
+    _save_podcasts(valid_podcasts)
+    
+    return jsonify({"podcasts": valid_podcasts})
 
 
 def get_podcast_route(podcast_id):
