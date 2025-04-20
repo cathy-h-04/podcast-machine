@@ -1,0 +1,11 @@
+{
+  "users": [
+    {
+      "id": "0179f652-0108-4cf8-aba5-103a95213f8f",
+      "name": "Nicholas Yang",
+      "email": "nyang@college.harvard.edu",
+      "password": "pbkdf2:sha256:600000$ecVBI8iY9eeWSl0d$ec4248f03f840b35e7138a17c5f71dcaaad1e2a4528f89c99ab884f233c36616",
+      "created_at": "2025-04-19T22:21:05.505903"
+    }
+  ]
+}

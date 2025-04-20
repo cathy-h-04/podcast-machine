@@ -1,21 +1,33 @@
-// filepath: /Users/nicholas/Documents/GitHub/claude-yap/frontend/app/routes/login.tsx
 import { useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { motion } from "framer-motion";
 
-export default function Login() {
+export default function Register() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Add validation error states
+  const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
   const navigate = useNavigate();
 
   // Validation functions
+  const validateName = () => {
+    if (!name.trim()) {
+      setNameError("Name is required");
+      return false;
+    }
+    setNameError("");
+    return true;
+  };
+
   const validateEmail = () => {
     if (!email.trim()) {
       setEmailError("Email is required");
@@ -36,16 +48,37 @@ export default function Login() {
       setPasswordError("Password is required");
       return false;
     }
+    if (password.length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      return false;
+    }
     setPasswordError("");
+    return true;
+  };
+
+  const validateConfirmPassword = () => {
+    if (!confirmPassword) {
+      setConfirmPasswordError("Please confirm your password");
+      return false;
+    }
+    if (password !== confirmPassword) {
+      setConfirmPasswordError("Passwords do not match");
+      return false;
+    }
+    setConfirmPasswordError("");
     return true;
   };
 
   // Validate all fields at once
   const validateAll = () => {
+    const isNameValid = validateName();
     const isEmailValid = validateEmail();
     const isPasswordValid = validatePassword();
+    const isConfirmPasswordValid = validateConfirmPassword();
 
-    return isEmailValid && isPasswordValid;
+    return (
+      isNameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,33 +93,26 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5111/api/login", {
+      const response = await fetch("http://localhost:5111/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setErrorMessage(
-          data.error || "Login failed. Please check your credentials."
-        );
+        setErrorMessage(data.error || "Registration failed. Please try again.");
         return;
       }
 
-      // Store authentication state
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("authToken", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      // Redirect to dashboard after successful login
-      navigate("/profile");
+      // Redirect to login page after successful registration
+      navigate("/login");
     } catch (error) {
       setErrorMessage(
-        "Login failed. Please check your credentials and try again."
+        "Registration failed. Please check your information and try again."
       );
-      console.error("Login error:", error);
+      console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -102,15 +128,15 @@ export default function Login() {
       >
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            Sign in to your account
+            Create your account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Or{" "}
             <Link
-              to="/register"
+              to="/login"
               className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
-              create a new account
+              sign in to your existing account
             </Link>
           </p>
         </div>
@@ -126,6 +152,36 @@ export default function Login() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
+            <div>
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Full name
+              </label>
+              <div className="mt-1">
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={validateName}
+                  className={`appearance-none block w-full px-3 py-2 border ${
+                    nameError ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
+                  placeholder="Enter your full name"
+                />
+                {nameError && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {nameError}
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div>
               <label
                 htmlFor="email-address"
@@ -168,7 +224,7 @@ export default function Login() {
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -176,11 +232,41 @@ export default function Login() {
                   className={`appearance-none block w-full px-3 py-2 border ${
                     passwordError ? "border-red-500" : "border-gray-300"
                   } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-                  placeholder="Enter your password"
+                  placeholder="Create a password (min. 8 characters)"
                 />
                 {passwordError && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                     {passwordError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="confirm-password"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Confirm password
+              </label>
+              <div className="mt-1">
+                <input
+                  id="confirm-password"
+                  name="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onBlur={validateConfirmPassword}
+                  className={`appearance-none block w-full px-3 py-2 border ${
+                    confirmPasswordError ? "border-red-500" : "border-gray-300"
+                  } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
+                  placeholder="Confirm your password"
+                />
+                {confirmPasswordError && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {confirmPasswordError}
                   </p>
                 )}
               </div>
@@ -215,7 +301,7 @@ export default function Login() {
                   ></path>
                 </svg>
               ) : (
-                "Sign in"
+                "Create account"
               )}
             </button>
           </div>

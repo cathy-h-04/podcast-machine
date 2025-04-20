@@ -5,13 +5,15 @@ PDF to Audio Script Converter
 A Flask API that converts PDF files to podcast, debate, or teaching scripts using Claude.
 The system handles user preferences and validates PDF content suitability.
 Only processes 'summaritive' mode requests.
+Includes user authentication with registration and login functionality.
+Also manages user-specific prompts for Claude to remember about each user.
 """
 
 from flask import Flask
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
-from routes import pdf_processing
+from routes import pdf_processing, auth, prompts
 
 # Load environment variables from .env file
 load_dotenv()
@@ -30,6 +32,43 @@ app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB limit
 @app.route("/generate", methods=["POST"])
 def generate_script():
     return pdf_processing.generate_script_route()
+
+
+# Authentication routes
+@app.route("/api/register", methods=["POST"])
+def register():
+    return auth.register_route()
+
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    return auth.login_route()
+
+
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    return auth.logout_route()
+
+
+# User prompts routes
+@app.route("/api/prompts", methods=["GET"])
+def get_prompts():
+    return prompts.get_prompts_route()
+
+
+@app.route("/api/prompts", methods=["POST"])
+def create_prompt():
+    return prompts.create_prompt_route()
+
+
+@app.route("/api/prompts/<prompt_id>", methods=["PUT"])
+def update_prompt(prompt_id):
+    return prompts.update_prompt_route(prompt_id)
+
+
+@app.route("/api/prompts/<prompt_id>", methods=["DELETE"])
+def delete_prompt(prompt_id):
+    return prompts.delete_prompt_route(prompt_id)
 
 
 if __name__ == "__main__":
