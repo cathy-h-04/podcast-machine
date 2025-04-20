@@ -235,7 +235,7 @@ export default function Home() {
       const data = await response.json();
       console.log("Response data:", data);
 
-      // If we have a podcast_id from the script generation, generate audio for it
+      // If we have a podcast_id from the script generation, generate audio and cover art for it
       if (data.podcast_id) {
         try {
           console.log("Generating audio for podcast ID:", data.podcast_id);
@@ -261,6 +261,40 @@ export default function Home() {
           } else {
             const audioData = await audioResponse.json();
             console.log("Audio generated successfully:", audioData);
+          }
+          
+          // Generate cover art
+          try {
+            console.log("Generating cover art for podcast ID:", data.podcast_id);
+            
+            // Create a prompt for the cover art based on the podcast title and style
+            const coverPrompt = `Create a podcast cover art for "${data.settings_used.title}". Style: ${data.style}.`;
+            
+            // Call the cover art generation endpoint
+            const coverResponse = await fetch(
+              "http://localhost:5111/api/generate-cover",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  podcast_id: data.podcast_id,
+                  prompt: coverPrompt,
+                }),
+              }
+            );
+            
+            if (!coverResponse.ok) {
+              console.error("Error generating cover art:", coverResponse.statusText);
+            } else {
+              const coverData = await coverResponse.json();
+              console.log("Cover art generated successfully:", coverData);
+            }
+          } catch (coverError) {
+            console.error("Error generating cover art:", coverError);
+            // Continue with success message even if cover art generation fails
           }
         } catch (audioError) {
           console.error("Error generating audio:", audioError);
