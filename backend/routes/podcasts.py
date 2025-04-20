@@ -55,23 +55,15 @@ def get_podcast_route(podcast_id):
     return jsonify({"podcast": podcast})
 
 
-def save_podcast(title, format, people_count, script, audio_url=None):
+def save_podcast(title, format, script, audio_url=None):
     """Save a new podcast to the database"""
     podcasts = _load_podcasts()
-
-    # Convert numeric people count to text representation for frontend
-    people_text = "one"
-    if people_count == 2:
-        people_text = "two"
-    elif people_count >= 3:
-        people_text = "three"
 
     # Create a new podcast entry
     new_podcast = {
         "id": str(uuid.uuid4()),
         "title": title,
         "format": format.lower(),  # podcast, debate, or duck
-        "peopleCount": people_text,
         "createdAt": datetime.now().isoformat(),
         "duration": calculate_duration(script),  # Calculate based on script length
         "audioUrl": audio_url or "#",  # Placeholder if no audio URL yet

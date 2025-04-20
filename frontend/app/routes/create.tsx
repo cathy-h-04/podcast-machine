@@ -24,9 +24,6 @@ export default function Home() {
   const [podcastFormat, setPodcastFormat] = useState<
     "debate" | "podcast" | "duck" | "none"
   >("none");
-  const [peopleCount, setPeopleCount] = useState<
-    "one" | "two" | "three" | "none"
-  >("none");
 
   // Form validation state
   const [promptTouched, setPromptTouched] = useState(false);
@@ -108,10 +105,6 @@ export default function Home() {
     selectedFormat: "debate" | "podcast" | "duck"
   ) => {
     setPodcastFormat(selectedFormat);
-  };
-
-  const handlePeopleCountChange = (count: "one" | "two" | "three") => {
-    setPeopleCount(count);
   };
 
   const handleModeChange = (selectedMode: "research" | "summaritive") => {
@@ -219,7 +212,6 @@ export default function Home() {
         files: fileData,
         mode,
         style: podcastFormat,
-        num_people: peopleCount,
         content: researchTopic,
       };
 
@@ -536,66 +528,6 @@ export default function Home() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.4 }}
-            >
-              <label className="form-label flex items-center">
-                <span className="mr-2">👥</span>
-                How many people should be in the audio?{" "}
-                <span className="text-red-500 ml-1">*</span>
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                <button
-                  onClick={() => handlePeopleCountChange("one")}
-                  className={`option-card flex flex-col items-center ${
-                    peopleCount === "one" ? "selected" : ""
-                  }`}
-                >
-                  <span className="text-3xl mb-2">👤</span>
-                  <span className="font-medium dark:text-white">
-                    One Person
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
-                    Solo monologue or narration
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => handlePeopleCountChange("two")}
-                  className={`option-card flex flex-col items-center ${
-                    peopleCount === "two" ? "selected" : ""
-                  }`}
-                >
-                  <span className="text-3xl mb-2">👤👤</span>
-                  <span className="font-medium dark:text-white">
-                    Two People
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
-                    Dialogue between two individuals
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => handlePeopleCountChange("three")}
-                  className={`option-card flex flex-col items-center ${
-                    peopleCount === "three" ? "selected" : ""
-                  }`}
-                >
-                  <span className="text-3xl mb-2">👤👤👤</span>
-                  <span className="font-medium dark:text-white">
-                    Three People
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
-                    Group discussion or panel
-                  </span>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-
-          <div className="mb-8">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.4 }}
             >
               <label className="form-label flex items-center">
@@ -814,7 +746,6 @@ export default function Home() {
                   prompt.trim().length === 0 ||
                   mode === "none" ||
                   podcastFormat === "none" ||
-                  peopleCount === "none" ||
                   (mode === "research" && researchTopic.trim().length === 0) ||
                   (mode === "summaritive" && files.length === 0)
                 }
@@ -823,7 +754,6 @@ export default function Home() {
                   prompt.trim().length === 0 ||
                   mode === "none" ||
                   podcastFormat === "none" ||
-                  peopleCount === "none" ||
                   (mode === "research" && researchTopic.trim().length === 0) ||
                   (mode === "summaritive" && files.length === 0)
                     ? "btn-disabled"
@@ -873,24 +803,6 @@ export default function Home() {
                 )}
               </button>
             </div>
-            <p className="mt-6 text-sm text-gray-500 dark:text-gray-400 flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 mr-1 text-indigo-500"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Powered by{" "}
-              <span className="text-indigo-600 dark:text-indigo-400 font-medium ml-1">
-                Claude AI
-              </span>
-            </p>
           </motion.div>
         </div>
       </motion.div>

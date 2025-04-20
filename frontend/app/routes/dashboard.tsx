@@ -7,7 +7,6 @@ type Podcast = {
   id: string;
   title: string;
   format: "debate" | "podcast" | "duck";
-  peopleCount: "one" | "two" | "three";
   createdAt: string;
   duration: number; // in seconds
   audioUrl: string;
@@ -49,32 +48,6 @@ export default function Dashboard() {
         const data = await response.json();
         setPodcasts(data.podcasts || []);
         setIsLoading(false);
-
-        // If there are no podcasts yet, use mock data to demonstrate the UI
-        if (data.podcasts?.length === 0) {
-          console.log("No podcasts found, using mock data for demonstration");
-          const mockPodcasts: Podcast[] = [
-            {
-              id: "1",
-              title: "AI Ethics Discussion",
-              format: "debate",
-              peopleCount: "two",
-              createdAt: "2025-04-15T10:30:00Z",
-              duration: 720, // 12 minutes
-              audioUrl: "#",
-            },
-            {
-              id: "2",
-              title: "Introduction to Machine Learning",
-              format: "duck",
-              peopleCount: "two",
-              createdAt: "2025-04-10T14:45:00Z",
-              duration: 900, // 15 minutes
-              audioUrl: "#",
-            },
-          ];
-          setPodcasts(mockPodcasts);
-        }
       } catch (err) {
         console.error("Error fetching podcasts:", err);
         setError("Failed to load podcasts. Please try again later.");
@@ -86,7 +59,6 @@ export default function Dashboard() {
             id: "1",
             title: "AI Ethics Discussion",
             format: "debate",
-            peopleCount: "two",
             createdAt: "2025-04-15T10:30:00Z",
             duration: 720, // 12 minutes
             audioUrl: "#",
@@ -95,7 +67,6 @@ export default function Dashboard() {
             id: "2",
             title: "Introduction to Machine Learning",
             format: "duck",
-            peopleCount: "two",
             createdAt: "2025-04-10T14:45:00Z",
             duration: 900, // 15 minutes
             audioUrl: "#",
@@ -178,20 +149,6 @@ export default function Dashboard() {
     }
   };
 
-  // Get icon for people count
-  const getPeopleIcon = (count: "one" | "two" | "three") => {
-    switch (count) {
-      case "one":
-        return "👤";
-      case "two":
-        return "👤👤";
-      case "three":
-        return "👤👤👤";
-      default:
-        return "👤";
-    }
-  };
-
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -255,7 +212,7 @@ export default function Dashboard() {
               You haven't created any podcasts yet.
             </p>
             <Link
-              to="/"
+              to="/create"
               className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition"
             >
               Create Your First Podcast
@@ -317,22 +274,6 @@ export default function Dashboard() {
 
                   {/* Right part (details) */}
                   <div className="flex-1 p-6 flex flex-col">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                        {podcast.title}
-                      </h3>
-                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                        {getPeopleIcon(podcast.peopleCount)}
-                        <span className="ml-1">
-                          {podcast.peopleCount === "one"
-                            ? "Solo"
-                            : podcast.peopleCount === "two"
-                            ? "Two Speakers"
-                            : "Three Speakers"}
-                        </span>
-                      </div>
-                    </div>
-
                     <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                       <div className="flex items-center mb-1">
                         <svg
