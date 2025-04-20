@@ -2,8 +2,10 @@
 from flask import request, jsonify, send_file
 import os
 import uuid
+import json
 from . import podcasts
-from services.tts_client import TTSClient
+from services.cartesia_client import CartesiaClient
+from services.script_processor import ScriptProcessor
 from dotenv import load_dotenv
 import tempfile
 
@@ -36,14 +38,13 @@ def generate_audio_route():
         if not script:
             return jsonify({"error": "Script is required"}), 400
 
-        # Initialize TTS client
+        # Initialize Script Processor for multi-speaker podcasts
         try:
-            tts_client = TTSClient(
-                subscription_key=os.getenv("AZURE_SPEECH_KEY"),
-                region=os.getenv("AZURE_SPEECH_REGION"),
+            script_processor = ScriptProcessor(
+                api_key=os.getenv("CARTESIA_API_KEY")
             )
         except Exception as e:
-            print(f"Error initializing TTS client: {str(e)}")
+            print(f"Error initializing Script Processor: {str(e)}")
             # Fallback: Create a dummy audio file for testing
             return _generate_dummy_audio(podcast_id)
 
@@ -51,14 +52,21 @@ def generate_audio_route():
         audio_filename = f"{uuid.uuid4()}.mp3"
         audio_path = os.path.join(AUDIO_DIR, audio_filename)
 
-        # Convert script to audio using TTS
+        # Process the script and generate multi-speaker podcast
         try:
-            # Generate audio
-            audio_data = tts_client.convert_text_to_speech(script)
-
-            # Save audio to file
-            with open(audio_path, "wb") as f:
-                f.write(audio_data)
+            # Save script to a temporary file
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as temp_file:
+                temp_file.write(script)
+                script_path = temp_file.name
+            
+            # Process the script and generate the podcast
+            success = script_processor.process_script(script_path, audio_path)
+            
+            # Clean up temporary file
+            os.unlink(script_path)
+            
+            if not success:
+                raise Exception("Failed to process script and generate podcast")
 
             # Create a public URL for the audio file
             audio_url = f"/static/audio/{audio_filename}"
