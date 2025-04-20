@@ -104,6 +104,11 @@ def generate_audio():
 def get_audio(filename):
     return audio_generation.get_audio_route(filename)
 
+
+@app.route("/api/audio-progress/<podcast_id>", methods=["GET"])
+def get_audio_progress(podcast_id):
+    return audio_generation.get_progress_route(podcast_id)
+
 # Cover Art Generation
 @app.route("/api/generate-cover", methods=["POST"])
 def generate_cover():

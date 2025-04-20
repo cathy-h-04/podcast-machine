@@ -24,6 +24,16 @@ export default function Home() {
   const [podcastFormat, setPodcastFormat] = useState<
     "debate" | "podcast" | "duck" | "none"
   >("none");
+  
+  // Progress tracking state
+  const [currentPodcastId, setCurrentPodcastId] = useState<string | null>(null);
+  const [progressStatus, setProgressStatus] = useState<{
+    status: string;
+    step: string;
+    progress: number;
+    message: string;
+  } | null>(null);
+  const [progressPollingActive, setProgressPollingActive] = useState(false);
 
   // Form validation state
   const [promptTouched, setPromptTouched] = useState(false);
@@ -182,6 +192,8 @@ export default function Home() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    setProgressStatus(null);
+    setCurrentPodcastId(null);
 
     // Hide the form with animation
     setIsFormVisible(false);
@@ -240,6 +252,20 @@ export default function Home() {
         try {
           console.log("Generating audio for podcast ID:", data.podcast_id);
 
+          // Set the current podcast ID for progress tracking
+          setCurrentPodcastId(data.podcast_id);
+
+          // Start polling for progress updates
+          setProgressPollingActive(true);
+
+          // Initial progress status
+          setProgressStatus({
+            status: "initializing",
+            step: "setup",
+            progress: 5,
+            message: "Preparing to generate audio...",
+          });
+
           // Call the audio generation endpoint
           const audioResponse = await fetch(
             "http://localhost:5111/api/generate-audio",
@@ -258,58 +284,77 @@ export default function Home() {
 
           if (!audioResponse.ok) {
             console.error("Error generating audio:", audioResponse.statusText);
+            setProgressStatus({
+              status: "error",
+              step: "audio_generation",
+              progress: 0,
+              message: `Error: ${audioResponse.statusText}`,
+            });
           } else {
             const audioData = await audioResponse.json();
             console.log("Audio generated successfully:", audioData);
-          }
-          
-          // Generate cover art
-          try {
-            console.log("Generating cover art for podcast ID:", data.podcast_id);
-            
-            // Create a prompt for the cover art based on the podcast title and style
-            const coverPrompt = `Create a podcast cover art for "${data.settings_used.title}". Style: ${data.style}.`;
-            
-            // Call the cover art generation endpoint
-            const coverResponse = await fetch(
-              "http://localhost:5111/api/generate-cover",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  podcast_id: data.podcast_id,
-                  prompt: coverPrompt,
-                }),
-              }
-            );
-            
-            if (!coverResponse.ok) {
-              console.error("Error generating cover art:", coverResponse.statusText);
-            } else {
-              const coverData = await coverResponse.json();
-              console.log("Cover art generated successfully:", coverData);
+
+            // Wait for the progress polling to show 100% before continuing
+            // This ensures our UI shows the complete progress
+            let attempts = 0;
+            while (progressStatus?.progress !== 100 && attempts < 10) {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              attempts++;
             }
-          } catch (coverError) {
-            console.error("Error generating cover art:", coverError);
-            // Continue with success message even if cover art generation fails
           }
         } catch (audioError) {
           console.error("Error generating audio:", audioError);
           // Continue with success message even if audio generation fails
+        }
+
+        // Generate cover art
+        try {
+          console.log("Generating cover art for podcast ID:", data.podcast_id);
+
+          // Create a prompt for the cover art based on the podcast title and style
+          const coverPrompt = `Create a podcast cover art for "${data.settings_used.title}". Style: ${data.style}.`;
+
+          // Call the cover art generation endpoint
+          const coverResponse = await fetch(
+            "http://localhost:5111/api/generate-cover",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                podcast_id: data.podcast_id,
+                prompt: coverPrompt,
+              }),
+            }
+          );
+
+          if (!coverResponse.ok) {
+            console.error("Error generating cover art:", coverResponse.statusText);
+          } else {
+            const coverData = await coverResponse.json();
+            console.log("Cover art generated successfully:", coverData);
+          }
+        } catch (coverError) {
+          console.error("Error generating cover art:", coverError);
+          // Continue with success message even if cover art generation fails
         }
       }
 
       // Show success message
       setShowSuccessMessage(true);
 
+      // Stop progress polling
+      setProgressPollingActive(false);
+
       // Reset form after a delay
       setTimeout(() => {
         setIsLoading(false);
         setIsFormVisible(true);
         setShowSuccessMessage(false);
+        setProgressStatus(null);
+        setCurrentPodcastId(null);
       }, 3000);
 
       alert("Podcast generated successfully!");
@@ -322,49 +367,156 @@ export default function Home() {
       );
       setIsLoading(false);
       setIsFormVisible(true);
+      setProgressPollingActive(false);
+      setProgressStatus({
+        status: "error",
+        step: "submission",
+        progress: 0,
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   };
+
+  // Effect for polling progress updates
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    const pollProgress = async () => {
+      if (!progressPollingActive || !currentPodcastId) return;
+
+      try {
+        const token = localStorage.getItem("authToken");
+        const response = await fetch(
+          `http://localhost:5111/api/audio-progress/${currentPodcastId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const progressData = await response.json();
+          setProgressStatus(progressData);
+
+          // If we're done or there's an error, stop polling
+          if (progressData.status === "complete" || progressData.status === "error") {
+            setProgressPollingActive(false);
+          }
+        } else {
+          console.error("Error fetching progress:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error polling progress:", error);
+      }
+    };
+
+    if (progressPollingActive && currentPodcastId) {
+      // Poll immediately
+      pollProgress();
+      // Then set up interval
+      intervalId = setInterval(pollProgress, 2000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [progressPollingActive, currentPodcastId]);
 
   return (
     <div className="min-h-screen py-6 px-4 sm:px-6 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-950">
       {/* Success message */}
       {showSuccessMessage && (
         <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-70"
+        >
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-8 rounded-lg shadow-2xl max-w-md w-full border border-indigo-500">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
+                <svg
+                  className="h-10 w-10 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  ></path>
+                </svg>
+              </div>
+              <h3 className="text-2xl leading-6 font-medium text-indigo-300 mb-2">
+                Success!
+              </h3>
+              <p className="text-gray-300 mb-6">
+                Your podcast has been generated successfully. You can find it in
+                your dashboard.
+              </p>
+              <a
+                href="/dashboard"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Go to Dashboard
+              </a>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Progress bar overlay */}
+      {isLoading && progressStatus && (
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-indigo-600/20 backdrop-blur-sm z-50 flex items-center justify-center transition-all duration-300"
+          className="fixed inset-0 flex flex-col items-center justify-center z-40 bg-black bg-opacity-70"
         >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", damping: 15 }}
-            className="glass-effect p-8 rounded-xl shadow-2xl text-center max-w-md mx-auto border-2 border-indigo-400 dark:border-indigo-500"
-          >
-            <div className="text-6xl mb-4 animate-pulse-slow">🎉</div>
-            <h3 className="text-xl font-bold mb-2 dark:text-white">
-              Podcast Generated Successfully!
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-8 rounded-lg shadow-2xl max-w-md w-full border border-indigo-500">
+            <h3 className="text-xl leading-6 font-medium text-indigo-300 mb-4">
+              Generating Your Podcast
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Your podcast has been downloaded to your device.
-            </p>
-            <div className="podcast-control-btn mx-auto">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+
+            <div className="mb-4">
+              <div className="relative pt-1">
+                <div className="flex mb-2 items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-indigo-200 bg-indigo-900">
+                      {progressStatus.step.replace("_", " ").toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-semibold inline-block text-indigo-200">
+                      {progressStatus.progress}%
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-indigo-900">
+                  <div
+                    style={{ width: `${progressStatus.progress}%` }}
+                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500 transition-all duration-500 ease-in-out"
+                  ></div>
+                </div>
+              </div>
             </div>
-          </motion.div>
+
+            <p className="text-gray-300 mb-2 text-center">
+              {progressStatus.message}
+            </p>
+
+            {progressStatus.status === "error" && (
+              <div className="mt-4 p-3 bg-red-900 bg-opacity-50 border border-red-700 rounded-md">
+                <p className="text-red-300 text-sm">
+                  An error occurred. We'll still try to generate a podcast with
+                  what we have.
+                </p>
+              </div>
+            )}
+          </div>
         </motion.div>
       )}
 
@@ -816,7 +968,7 @@ export default function Home() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    Generating...
+                    {progressStatus ? progressStatus.message : "Generating..."}
                   </span>
                 ) : (
                   <span className="flex items-center justify-center">

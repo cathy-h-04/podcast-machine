@@ -13,11 +13,19 @@ import time
 import uuid
 import shutil
 import re
+import logging
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
 import dotenv
 from cartesia import Cartesia
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('ScriptProcessor')
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -68,7 +76,7 @@ class ScriptProcessor:
         """
         # Extract unique speakers
         unique_speakers = set(item["speaker"] for item in conversation)
-        print(f"Detected {len(unique_speakers)} unique speakers: {', '.join(unique_speakers)}")
+        logger.info(f"Detected {len(unique_speakers)} unique speakers: {', '.join(unique_speakers)}")
         
         # Reset speaker voice mapping
         self.speaker_voice_mapping = {}
@@ -92,13 +100,13 @@ class ScriptProcessor:
                 voice_index = i % len(self.available_voices)
                 self.speaker_voice_mapping[speaker] = self.available_voices[voice_index]["id"]
         
-        print("Voice assignments:")
+        logger.info("Voice assignments:")
         for speaker, voice_id in self.speaker_voice_mapping.items():
             voice_info = next((v for v in self.available_voices if v["id"] == voice_id), None)
             if voice_info:
-                print(f"  {speaker}: {voice_info['gender']} {voice_info['type']}")
+                logger.info(f"  {speaker}: {voice_info['gender']} {voice_info['type']}")
             else:
-                print(f"  {speaker}: {voice_id}")
+                logger.info(f"  {speaker}: {voice_id}")
         
         return self.speaker_voice_mapping
     
@@ -113,12 +121,18 @@ class ScriptProcessor:
             list: List of dictionaries with speaker and text
                  [{"speaker": "Host", "text": "Hello"}, ...]
         """
-        with open(script_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Skip script planning section if present
-        if '<script_planning>' in content:
-            content = content.split('</script_planning>')[1].strip()
+        try:
+            logger.info(f"Parsing script file: {script_path}")
+            # Read the script file
+            with open(script_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+            # Skip script planning section if present
+            if '<script_planning>' in content:
+                content = content.split('</script_planning>')[-1].strip()
+        except Exception as e:
+            logger.error(f"Error reading script file: {e}")
+            return []
         
         # Parse the conversation
         lines = content.split('\n')
@@ -164,6 +178,7 @@ class ScriptProcessor:
                 "text": ' '.join(current_text)
             })
         
+        logger.info(f"Parsed script with {len(conversation)} dialogue lines")
         return conversation
     
     def assign_voices(self, conversation):
@@ -211,78 +226,87 @@ class ScriptProcessor:
         os.makedirs(output_dir, exist_ok=True)
         segment_paths = []
         
-        for i, item in enumerate(conversation):
-            speaker = item["speaker"]
-            text = item["text"]
-            
-            # Get voice ID for this speaker
-            voice_id = self.speaker_voice_mapping.get(speaker, self.available_voices[0]["id"])
-            
-            # Configure output format for raw audio (SSE endpoint only supports raw)
-            format_config = {
-                "container": "raw",
-                "sample_rate": 44100,
-                "encoding": "pcm_f32le",
-            }
-            
-            try:
-                # Get WAV audio data directly from Cartesia
-                print(f"Generating audio for {speaker}, segment {i+1}/{len(conversation)}")
+        try:
+            logger.info(f"Generating audio segments for {len(conversation)} dialogue lines")
+            for i, item in enumerate(conversation):
+                speaker = item["speaker"]
+                text = item["text"]
                 
-                # Configure output format for bytes endpoint
+                # Get voice ID for this speaker
+                voice_id = self.speaker_voice_mapping.get(speaker, self.available_voices[0]["id"])
+                
+                # Configure output format for raw audio (SSE endpoint only supports raw)
                 format_config = {
-                    "container": "wav",
+                    "container": "raw",
                     "sample_rate": 44100,
                     "encoding": "pcm_f32le",
                 }
                 
-                # Generate audio using Cartesia's bytes API
-                response = self.client.tts.bytes(
-                    model_id="sonic-2",
-                    transcript=text,
-                    voice={
-                        "mode": "id",
-                        "id": voice_id
-                    },
-                    output_format=format_config
-                )
-                
-                # Handle response which might be a generator
-                if hasattr(response, '__iter__') and not isinstance(response, bytes):
-                    # It's a generator, collect all chunks
-                    audio_chunks = []
-                    for chunk in response:
-                        if hasattr(chunk, 'data') and chunk.data is not None:
-                            audio_chunks.append(chunk.data)
-                        elif isinstance(chunk, bytes):
-                            audio_chunks.append(chunk)
-                    audio_data = b''.join(audio_chunks)
-                else:
-                    # It's already bytes
-                    audio_data = response
-                
-                # Save audio data to WAV file
-                segment_path = os.path.join(output_dir, f"segment_{i:03d}.wav")
-                with open(segment_path, "wb") as f:
-                    f.write(audio_data)
-                
-                segment_paths.append(segment_path)
-                print(f"Generated segment {i+1}/{len(conversation)}")
-                
-            except Exception as e:
-                error_message = str(e)
-                print(f"Error generating audio for segment {i+1}: {error_message}")
-                
-                # If we hit the credit limit, let's stop trying to generate more segments
-                if "credit limit reached" in error_message.lower():
-                    print("Cartesia API credit limit reached. Will create podcast with segments generated so far.")
-                    break
+                try:
+                    # Get WAV audio data directly from Cartesia
+                    logger.info(f"Generating audio for {speaker}: '{text[:50]}{'...' if len(text) > 50 else ''}' using voice {voice_id}")
                     
-                # Create an empty file as placeholder to maintain order
-                segment_path = os.path.join(output_dir, f"segment_{i:03d}.mp3")
-                with open(segment_path, "wb") as f:
-                    f.write(b"")
-                segment_paths.append(segment_path)
+                    # Configure output format for bytes endpoint
+                    format_config = {
+                        "container": "wav",
+                        "sample_rate": 44100,
+                        "encoding": "pcm_f32le",
+                    }
+                    
+                    # Generate audio using Cartesia's bytes API
+                    response = self.client.tts.bytes(
+                        model_id="sonic-2",
+                        transcript=text,
+                        voice={
+                            "mode": "id",
+                            "id": voice_id
+                        },
+                        output_format=format_config
+                    )
+                    
+                    # Handle response which might be a generator
+                    if hasattr(response, '__iter__') and not isinstance(response, bytes):
+                        # It's a generator, collect all chunks
+                        audio_chunks = []
+                        for chunk in response:
+                            if hasattr(chunk, 'data') and chunk.data is not None:
+                                audio_chunks.append(chunk.data)
+                            elif isinstance(chunk, bytes):
+                                audio_chunks.append(chunk)
+                        audio_data = b''.join(audio_chunks)
+                    else:
+                        # It's already bytes
+                        audio_data = response
+                    
+                    # Save audio data to WAV file
+                    segment_path = os.path.join(output_dir, f"segment_{i:03d}.wav")
+                    with open(segment_path, "wb") as f:
+                        f.write(audio_data)
+                    
+                    segment_paths.append(segment_path)
+                    logger.info(f"Generated segment {i+1}/{len(conversation)}")
+                    
+                except Exception as e:
+                    error_message = str(e)
+                    logger.error(f"Error generating audio for segment {i}: {e}")
+                    
+                    # If we hit the credit limit, let's stop trying to generate more segments
+                    if "credit limit reached" in error_message.lower():
+                        logger.info("Cartesia API credit limit reached. Will create podcast with segments generated so far.")
+                        break
+                        
+                    # Create an empty file as placeholder to maintain order
+                    segment_path = os.path.join(output_dir, f"segment_{i:03d}.mp3")
+                    with open(segment_path, "wb") as f:
+                        f.write(b"")
+                    segment_paths.append(segment_path)
+        except Exception as e:
+            logger.error(f"Error generating audio segments: {e}")
+            # Create an empty file as placeholder to maintain order
+            segment_path = os.path.join(output_dir, f"segment_{len(segment_paths):03d}.mp3")
+            with open(segment_path, "wb") as f:
+                f.write(b"")
+            segment_paths.append(segment_path)
         return segment_paths
     
     def combine_audio_segments(self, segment_paths, output_path):
@@ -306,13 +330,13 @@ class ScriptProcessor:
                         f.write(f"file '{os.path.abspath(segment_path)}'\n")
                         valid_segments.append(segment_path)
                     else:
-                        print(f"Warning: Skipping empty or missing file: {segment_path}")
+                        logger.warning(f"Skipping empty or missing file: {segment_path}")
             
-            print(f"Including {len(valid_segments)} valid audio segments in the podcast")
+            logger.info(f"Including {len(valid_segments)} valid audio segments in the podcast")
             
             # If we have no valid segments, return False
             if not valid_segments:
-                print("No valid audio segments found. Cannot create podcast.")
+                logger.error("No valid audio segments found. Cannot create podcast.")
                 return False
             
             # Ensure output path has .wav extension
@@ -331,40 +355,67 @@ class ScriptProcessor:
             
             # Check if the output file was created successfully
             if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                print(f"Podcast generated successfully: {output_path}")
-                print(f"Podcast file size: {os.path.getsize(output_path) / (1024 * 1024):.2f} MB")
+                logger.info(f"Podcast generated successfully: {output_path}")
+                logger.info(f"Podcast file size: {os.path.getsize(output_path) / (1024 * 1024):.2f} MB")
                 return True
             else:
-                print(f"Error: Output file {output_path} was not created or is empty")
+                logger.error(f"Output file {output_path} was not created or is empty")
                 return False
         except Exception as e:
-            print(f"Error combining audio segments: {e}")
+            logger.exception(f"Error combining audio segments: {e}")
             return False
     
-    def process_script(self, script_path, output_path):
+    def process_script(self, script_path, output_path, callback=None):
         """
         Process a script file and generate a podcast
         
         Args:
             script_path (str): Path to the script file
             output_path (str): Path to save the podcast
+            callback (function, optional): Callback function to report progress
             
         Returns:
             bool: True if successful, False otherwise
         """
         try:
+            # Report progress: Starting script processing
+            logger.info(f"Starting script processing: {script_path}")
+            if callback:
+                callback({"status": "processing", "step": "parsing", "progress": 10, 
+                         "message": "Parsing script file"})
+            
             # Parse the script
             conversation = self.parse_script(script_path)
             if not conversation:
-                print("Error: Failed to parse script")
+                logger.error("Failed to parse script")
+                if callback:
+                    callback({"status": "error", "step": "parsing", "progress": 10, 
+                             "message": "Failed to parse script"})
                 return False
+            
+            logger.info(f"Successfully parsed script with {len(conversation)} dialogue lines")
+            if callback:
+                callback({"status": "processing", "step": "speaker_detection", "progress": 30, 
+                         "message": "Detecting speakers and assigning voices"})
             
             # Detect speakers and assign voices
             self.detect_speakers_and_assign_voices(conversation)
             
+            # Report progress: Generating audio segments
+            logger.info("Starting audio segment generation")
+            if callback:
+                callback({"status": "processing", "step": "audio_generation", "progress": 50, 
+                         "message": "Generating audio segments"})
+            
             # Generate audio segments
             output_dir = tempfile.mkdtemp()
             segment_paths = self.generate_audio_segments(conversation, output_dir)
+            
+            # Report progress: Combining audio segments
+            logger.info(f"Generated {len(segment_paths)} audio segments, now combining")
+            if callback:
+                callback({"status": "processing", "step": "combining", "progress": 80, 
+                         "message": "Combining audio segments"})
             
             # Combine audio segments
             success = self.combine_audio_segments(segment_paths, output_path)
@@ -372,9 +423,24 @@ class ScriptProcessor:
             # Clean up temporary directory
             shutil.rmtree(output_dir, ignore_errors=True)
             
+            # Report final status
+            if success:
+                logger.info(f"Successfully generated podcast: {output_path}")
+                if callback:
+                    callback({"status": "complete", "step": "finished", "progress": 100, 
+                             "message": "Podcast generation complete"})
+            else:
+                logger.error("Failed to generate podcast")
+                if callback:
+                    callback({"status": "error", "step": "combining", "progress": 80, 
+                             "message": "Failed to combine audio segments"})
+            
             return success
         except Exception as e:
-            print(f"Error processing script: {e}")
+            logger.exception(f"Error processing script: {e}")
+            if callback:
+                callback({"status": "error", "step": "processing", "progress": 0, 
+                         "message": f"Error: {str(e)}"})
             return False
 
 

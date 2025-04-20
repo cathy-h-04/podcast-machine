@@ -24,6 +24,7 @@ The application supports various podcast formats (debate, conversation, educatio
 - Node.js (v16 or higher)
 - Python 3.9+
 - Claude API access
+- Cartesia API access for text-to-speech
 
 ### Installation
 
@@ -39,8 +40,9 @@ cd claude-yap
 ```bash
 cd backend
 pip install -r requirements.txt
-# Create a .env file with your Claude API key
-echo "ANTHROPIC_API_KEY=your-api-key-here" > .env
+# Create a .env file with your API keys
+echo "ANTHROPIC_API_KEY=your-anthropic-api-key-here" > .env
+echo "CARTESIA_API_KEY=your-cartesia-api-key-here" >> .env
 ```
 
 3. Set up the frontend
@@ -137,4 +139,5 @@ TODO:
 
 - Python with Flask
 - Claude API for AI content generation
+- Cartesia API for high-quality text-to-speech
 - PDF processing libraries
