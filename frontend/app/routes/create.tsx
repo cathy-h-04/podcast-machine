@@ -127,7 +127,25 @@ export default function Home() {
     const pdfFiles = selectedFiles.filter(
       (file) => file.type === "application/pdf"
     );
-    setFiles((prevFiles) => [...prevFiles, ...pdfFiles]);
+
+    // Limit to 2 PDF files in total
+    if (files.length + pdfFiles.length <= 2) {
+      setFiles((prevFiles) => [...prevFiles, ...pdfFiles]);
+    } else {
+      // If user tries to add more than 2 files, only add enough to reach the limit
+      const availableSlots = Math.max(0, 2 - files.length);
+      if (availableSlots > 0) {
+        setFiles((prevFiles) => [
+          ...prevFiles,
+          ...pdfFiles.slice(0, availableSlots),
+        ]);
+      }
+
+      // Show alert about file limit
+      alert(
+        "Maximum of 2 PDF files allowed. Only the first 2 files will be used."
+      );
+    }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -138,7 +156,25 @@ export default function Home() {
       const pdfFiles = droppedFiles.filter(
         (file) => file.type === "application/pdf"
       );
-      setFiles((prevFiles) => [...prevFiles, ...pdfFiles]);
+
+      // Limit to 2 PDF files in total
+      if (files.length + pdfFiles.length <= 2) {
+        setFiles((prevFiles) => [...prevFiles, ...pdfFiles]);
+      } else {
+        // If user tries to drop more than 2 files, only add enough to reach the limit
+        const availableSlots = Math.max(0, 2 - files.length);
+        if (availableSlots > 0) {
+          setFiles((prevFiles) => [
+            ...prevFiles,
+            ...pdfFiles.slice(0, availableSlots),
+          ]);
+        }
+
+        // Show alert about file limit
+        alert(
+          "Maximum of 2 PDF files allowed. Only the first 2 files will be used."
+        );
+      }
     }
     setIsDraggingFile(false);
   };
@@ -687,8 +723,17 @@ export default function Home() {
                     Click to upload PDFs or drag and drop here
                   </div>
                   <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    PDF files only
+                    PDF files only (Maximum 2 files)
                   </p>
+                  <div className="mt-3 flex items-center justify-center text-sm">
+                    <span
+                      className={`font-medium ${
+                        files.length >= 2 ? "text-red-500" : "text-indigo-500"
+                      }`}
+                    >
+                      {files.length}/2 files uploaded
+                    </span>
+                  </div>
                 </div>
 
                 {files.length > 0 && (

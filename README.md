@@ -14,6 +14,10 @@ The application supports various podcast formats (debate, conversation, educatio
 - **Multiple Podcast Formats**: Choose between debate-style, conversational podcast, or educational formats
 - **Customizable Participants**: Select between one, two, or three speakers for your podcast
 - **PDF Processing**: Upload PDF documents for Claude to analyze and discuss
+- **User Authentication**: Secure registration and login system to manage your podcasts
+- **Audio Generation**: Convert generated scripts into lifelike audio using text-to-speech technology
+- **User Profiles**: Save preferences and access your podcast history
+- **Prompt Management**: Store and reuse custom prompts for consistent podcast styles
 
 ## 🚀 Getting Started
 
@@ -69,40 +73,71 @@ npm run dev
 ## 🏗️ Project Structure
 
 ```
-clause-yap/
-├── backend/            # Python backend with Claude API integration
-│   ├── app.py          # Main Flask application
-│   └── requirements.txt # Python dependencies
-└── frontend/           # React frontend
-    ├── app/            # Application code
-    │   ├── routes/     # Page components
-    │   └── app.css     # Global styles
-    └── package.json    # Node dependencies
+claude-yap/
+├── backend/                 # Python backend with Claude API integration
+│   ├── app.py               # Main Flask application
+│   ├── requirements.txt     # Python dependencies
+│   ├── routes/              # API route handlers
+│   │   ├── audio_generation.py  # Audio generation endpoints
+│   │   ├── auth.py          # Authentication endpoints
+│   │   ├── pdf_processing.py # PDF handling and script generation
+│   │   ├── podcasts.py      # Podcast management
+│   │   ├── prompts.py       # User prompts management
+│   │   └── script_generation.py # Script generation logic
+│   ├── services/            # External service integrations
+│   │   ├── claude_client.py # Claude API client
+│   │   └── tts_client.py    # Text-to-speech service client
+│   ├── utils/               # Utility functions
+│   │   └── auth_helpers.py  # Authentication helper functions
+│   ├── data/                # Data storage
+│   │   ├── podcasts.json    # Saved podcast data
+│   │   ├── prompts.json     # User prompts data
+│   │   └── users.json       # User account data
+│   ├── static/              # Static files
+│   │   └── audio/           # Generated audio files
+│   └── outputs/             # Script output files
+└── frontend/                # React frontend
+    ├── app/                 # Application code
+    │   ├── routes/          # Page components
+    │   │   ├── create.tsx   # Podcast creation page
+    │   │   ├── dashboard.tsx # Main dashboard
+    │   │   ├── login.tsx    # Login page
+    │   │   ├── profile.tsx  # User profile page
+    │   │   └── register.tsx # Registration page
+    │   ├── app.css          # Global styles
+    │   ├── root.tsx         # Root component
+    │   └── routes.ts        # Route definitions
+    ├── public/              # Public assets
+    ├── package.json         # Node dependencies
+    ├── tsconfig.json        # TypeScript configuration
+    └── vite.config.ts       # Vite configuration
 ```
 
 ## 🧩 How It Works
 
-1. **Select a Podcast Format**: Choose between debate, conversation, or educational styles
-2. **Choose Number of Participants**: Select one, two, or three speakers
-3. **Select Content Source**: Either AI research or PDF document summary
-4. **Provide Input**: Enter research topic or upload PDF files
-5. **Generate Podcast**: Claude processes your request and generates audio content
-6. **Download & Enjoy**: Get your AI-generated podcast ready to share
+1. **Create an Account**: Register and login to access all features and save your podcasts
+2. **Select a Podcast Format**: Choose between debate, conversation, or educational styles
+3. **Choose Number of Participants**: Select one, two, or three speakers
+4. **Select Content Source**: Either AI research or PDF document summary
+5. **Provide Input**: Enter research topic or upload PDF files
+6. **Generate Script**: Claude processes your request and generates a podcast script
+7. **Convert to Audio**: The system transforms your script into lifelike audio using TTS
+8. **Download & Share**: Access your finished podcast from your profile and share it
 
 ## 🖼️ Screenshots
 
-TODO: 
+TODO:
 
 ## 🛠️ Technologies Used
 
 ### Frontend
+
 - React with React Router
 - Tailwind CSS for styling
 - Framer Motion for animations
 
 ### Backend
+
 - Python with Flask
 - Claude API for AI content generation
 - PDF processing libraries
-
-
