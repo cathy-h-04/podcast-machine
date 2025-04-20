@@ -49,5 +49,5 @@ if __name__ == "__main__":
             exit(1)
 
     # Start the application
-    port = int(os.getenv("PORT", 5000))
+    port = int(os.getenv("PORT", 6000))
     app.run(host="0.0.0.0", port=port, debug=True)
