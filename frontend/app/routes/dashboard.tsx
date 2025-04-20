@@ -115,7 +115,7 @@ export default function Dashboard() {
   }, []);
 
   // Handle playing/pausing podcasts
-  const togglePlayPause = (podcast: Podcast) => {
+  const togglePlayPause = async (podcast: Podcast) => {
     if (currentlyPlaying === podcast.id) {
       // Pause current audio
       if (audioElement) {
@@ -128,20 +128,45 @@ export default function Dashboard() {
         audioElement.pause();
       }
 
+      // Construct the full audio URL if it's a relative path
+      let audioUrl = podcast.audioUrl;
+      if (audioUrl && !audioUrl.startsWith("http") && audioUrl !== "#") {
+        audioUrl = `http://localhost:5111${audioUrl}`;
+      }
+
+      // Check if audio URL is valid
+      if (!audioUrl || audioUrl === "#") {
+        setError(
+          "This podcast doesn't have an audio file yet. Please generate audio first."
+        );
+        return;
+      }
+
+      console.log("Attempting to play audio from URL:", audioUrl);
+
       // Create and play new audio
-      const audio = new Audio(`http://localhost:5111${podcast.audioUrl}`);
-      audio.play().catch((err) => {
-        console.error("Error playing audio:", err);
+      const audio = new Audio(audioUrl);
+
+      // Set up error handling before attempting to play
+      audio.onerror = (e) => {
+        console.error("Audio error:", e);
         setError("Failed to play audio. The file may be missing or corrupted.");
-      });
+        setCurrentlyPlaying(null);
+      };
 
-      setAudioElement(audio);
-      setCurrentlyPlaying(podcast.id);
-
-      // Auto-reset when finished
+      // Set up ended handler
       audio.onended = () => {
         setCurrentlyPlaying(null);
       };
+
+      try {
+        await audio.play();
+        setAudioElement(audio);
+        setCurrentlyPlaying(podcast.id);
+      } catch (err) {
+        console.error("Error playing audio:", err);
+        setError("Failed to play audio. The file may be missing or corrupted.");
+      }
     }
   };
 
