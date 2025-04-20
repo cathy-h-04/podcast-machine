@@ -167,7 +167,7 @@ def generate_audio_route():
 def _generate_dummy_audio(podcast_id):
     """Generate a dummy audio file for testing purposes"""
     logger.info(f"Generating dummy audio for podcast {podcast_id}")
-    
+
     # Generate a unique filename with .wav extension
     audio_filename = f"{uuid.uuid4()}.wav"
     audio_path = os.path.join(AUDIO_DIR, audio_filename)
@@ -211,7 +211,12 @@ def get_audio_route(filename):
     # List all available audio files for debugging
     all_files = os.listdir(AUDIO_DIR) if os.path.exists(AUDIO_DIR) else []
     # Filter out system files and non-audio files
-    available_files = [f for f in all_files if not f.startswith('.') and f.lower().endswith(('.mp3', '.wav', '.ogg', '.m4a'))]
+    available_files = [
+        f
+        for f in all_files
+        if not f.startswith(".")
+        and f.lower().endswith((".mp3", ".wav", ".ogg", ".m4a"))
+    ]
     logger.info(f"Available audio files: {available_files}")
 
     # Check if the exact file exists
@@ -221,27 +226,31 @@ def get_audio_route(filename):
         mimetype = "audio/mpeg" if ext == ".mp3" else "audio/wav"
         logger.info(f"Serving audio file: {audio_path} with mimetype: {mimetype}")
         return send_file(audio_path, mimetype=mimetype)
-    
+
     # If the exact file doesn't exist, try to find a matching file by base name
     base_name = os.path.splitext(filename)[0]
     matching_files = [f for f in available_files if f.startswith(base_name)]
-    
+
     if matching_files:
         # Use the first matching file
         matching_file = matching_files[0]
         matching_path = os.path.join(AUDIO_DIR, matching_file)
         ext = os.path.splitext(matching_file)[1].lower()
         mimetype = "audio/mpeg" if ext == ".mp3" else "audio/wav"
-        logger.info(f"Serving alternative audio file: {matching_path} with mimetype: {mimetype}")
+        logger.info(
+            f"Serving alternative audio file: {matching_path} with mimetype: {mimetype}"
+        )
         return send_file(matching_path, mimetype=mimetype)
-    
+
     # If no matching file is found, return an error
     logger.error(f"Audio file not found: {audio_path}")
-    return jsonify({
-        "error": "Audio file not found",
-        "requested": filename,
-        "available": available_files
-    }), 404
+    return jsonify(
+        {
+            "error": "Audio file not found",
+            "requested": filename,
+            "available": available_files,
+        }
+    ), 404
 
 
 def get_progress_route(podcast_id):

@@ -2,6 +2,7 @@
 import os
 import base64
 import anthropic
+import re
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -51,7 +52,7 @@ def load_prompt_template(style="podcast"):
 def get_default_settings(style, filename=None):
     """Get default settings for display in the response"""
     style_defaults = STYLE_DEFAULTS.get(style.lower(), STYLE_DEFAULTS["podcast"])
-    
+
     # Create title from filename if available
     if filename:
         title = f"{filename} Discussion"
@@ -74,7 +75,7 @@ def generate_script(pdf_contents, style, user_message="", filename=None):
     print("PDF contents:", pdf_contents)
     print("Style:", style)
     print("Filename:", filename)
-    
+
     # Get default settings for the style (for including in the response)
     settings = get_default_settings(style, filename)
 
@@ -108,30 +109,33 @@ If any preferences are not specified, use reasonable defaults.
     # Extract file paths from pdf_contents
     pdf_files = []
     for i, pdf_content in enumerate(pdf_contents):
-        print(f"Processing PDF {i+1} for Claude API: {pdf_content['filename']}")
+        print(f"Processing PDF {i + 1} for Claude API: {pdf_content['filename']}")
         try:
             # Check if the type is correct
             if pdf_content["type"] != "document":
-                print(f"Warning: PDF content type is {pdf_content['type']}, changing to 'document'")
+                print(
+                    f"Warning: PDF content type is {pdf_content['type']}, changing to 'document'"
+                )
                 pdf_content["type"] = "document"
-                
+
             with open(pdf_content["path"], "rb") as f:
                 file_data = f.read()
                 print(f"Read {len(file_data)} bytes from {pdf_content['filename']}")
-                
+
                 pdf_files.append(
                     {
                         "type": "document",
                         "source": {
                             "type": "base64",
                             "media_type": "application/pdf",
-                            "data": base64.b64encode(file_data).decode("utf-8")
-                        }
+                            "data": base64.b64encode(file_data).decode("utf-8"),
+                        },
                     }
                 )
         except Exception as e:
             print(f"Error processing PDF for Claude API: {str(e)}")
             import traceback
+
             print(traceback.format_exc())
             raise
 
@@ -146,10 +150,10 @@ If any preferences are not specified, use reasonable defaults.
                 "content": [
                     {
                         "type": "text",
-                        "text": "Please analyze these PDFs and convert the content to a script according to my instructions."
+                        "text": "Please analyze these PDFs and convert the content to a script according to my instructions.",
                     },
-                    *pdf_files
-                ]
+                    *pdf_files,
+                ],
             }
         ],
     )
@@ -157,12 +161,42 @@ If any preferences are not specified, use reasonable defaults.
     # Extract the generated script
     generated_script = response.content[0].text
 
+    # Make a separate Claude API call to generate a title
+    title_prompt = f"""
+You are an expert podcast title generator. Your task is to create a catchy, engaging title for a podcast episode based on the script I will provide.
+
+The title should:
+- Be concise (30-60 characters)
+- Be engaging and draw the listener in
+- Accurately reflect the main topic of the conversation
+- Be suitable for a podcast episode
+- Avoid clickbait or sensationalism
+
+Script:
+{generated_script[:2000]}  # Send first 2000 characters of script for context
+
+Generate only the title as your response, with no additional commentary or explanations.
+"""
+
+    title_response = claude_client.messages.create(
+        model="claude-3-5-sonnet-20240620",  # Can use a smaller model for title generation
+        max_tokens=100,
+        messages=[{"role": "user", "content": title_prompt}],
+    )
+
+    # Extract the generated title
+    generated_title = title_response.content[0].text.strip()
+    print(f"Generated title: {generated_title}")
+
+    # Update settings with the generated title
+    settings["title"] = generated_title
+
     # Determine output filename
     if filename:
         output_filename = f"{filename}.txt"
     else:
         output_filename = "output.txt"
-        
+
     # Log how many PDFs were processed
     print(f"Processed {len(pdf_files)} PDFs for script generation")
 
@@ -179,35 +213,67 @@ If any preferences are not specified, use reasonable defaults.
 def extract_settings_from_script(script, filename=None):
     """Extract settings from a generated script"""
     settings = {}
-    
+
     # Set a default title based on filename if available
     if filename:
         settings["title"] = filename
     else:
         settings["title"] = "Untitled Podcast"
-    
+
     # Try to extract a better title from the script
-    lines = script.split('\n')
+    lines = script.split("\n")
+
+    # First look for a title in the standard format (first 10 lines)
     for line in lines[:10]:  # Check first 10 lines for a title
-        if line.strip().startswith('#') or line.strip().startswith('Title:'):
+        if line.strip().startswith("#") or line.strip().startswith("Title:"):
             # Found a title line
-            title = line.strip().replace('#', '').replace('Title:', '').strip()
+            title = line.strip().replace("#", "").replace("Title:", "").strip()
             if title:  # If title is not empty
                 settings["title"] = title
                 break
-    
+
+    # Search for Clause 3.5 in the entire script
+    clause_3_5_title = None
+    clause_pattern = r"(?i)Clause\s+3\.5\s*[:-]?\s*(.*?)(?:\n|$)"
+
+    # Search through all lines for Clause 3.5
+    for i, line in enumerate(lines):
+        if "Clause 3.5" in line or "clause 3.5" in line:
+            # Found a reference to Clause 3.5
+            # Try to extract the title from this line
+            match = re.search(clause_pattern, line)
+            if match and match.group(1).strip():
+                clause_3_5_title = match.group(1).strip()
+            else:
+                # If title not on same line, check next line for potential title
+                if (
+                    i + 1 < len(lines)
+                    and lines[i + 1].strip()
+                    and not lines[i + 1].strip().startswith("Clause")
+                ):
+                    clause_3_5_title = lines[i + 1].strip()
+            break
+
+    # If found a title in Clause 3.5, use it
+    if clause_3_5_title:
+        settings["title"] = clause_3_5_title
+
     # Extract other potential settings
     settings["host_name"] = "Host"
     settings["guest_name"] = "Guest"
-    
+
     # Look for host/guest names in the script
     for line in lines[:30]:  # Check first 30 lines
-        if ':' in line:
-            speaker = line.split(':', 1)[0].strip()
-            if speaker and speaker != settings["host_name"] and speaker != settings["guest_name"]:
+        if ":" in line:
+            speaker = line.split(":", 1)[0].strip()
+            if (
+                speaker
+                and speaker != settings["host_name"]
+                and speaker != settings["guest_name"]
+            ):
                 if settings["host_name"] == "Host":
                     settings["host_name"] = speaker
                 elif settings["guest_name"] == "Guest":
                     settings["guest_name"] = speaker
-    
+
     return settings

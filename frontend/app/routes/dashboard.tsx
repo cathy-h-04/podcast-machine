@@ -73,27 +73,6 @@ export default function Dashboard() {
         console.error("Error fetching podcasts:", err);
         setError("Failed to load podcasts. Please try again later.");
         setIsLoading(false);
-
-        // Use mock data as fallback in case of error
-        const mockPodcasts: Podcast[] = [
-          {
-            id: "1",
-            title: "AI Ethics Discussion",
-            format: "debate",
-            createdAt: "2025-04-15T10:30:00Z",
-            duration: 720, // 12 minutes
-            audioUrl: "#",
-          },
-          {
-            id: "2",
-            title: "Introduction to Machine Learning",
-            format: "duck",
-            createdAt: "2025-04-10T14:45:00Z",
-            duration: 900, // 15 minutes
-            audioUrl: "#",
-          },
-        ];
-        setPodcasts(mockPodcasts);
       }
     };
 
@@ -137,10 +116,10 @@ export default function Dashboard() {
       }
 
       console.log("Attempting to play audio from URL:", audioUrl);
-      
+
       // Create and play new audio
       const audio = new Audio(audioUrl);
-      
+
       // Set up error handling before attempting to play
       audio.onerror = (e) => {
         console.error("Audio error:", e);
@@ -626,6 +605,10 @@ export default function Dashboard() {
 
                   {/* Right part (details) */}
                   <div className="flex-1 p-6 flex flex-col">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                      {podcast.title}
+                    </h3>
+                    
                     <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                       <div className="flex items-center mb-1">
                         <svg
@@ -830,6 +813,29 @@ export default function Dashboard() {
                           : podcast.format === "podcast"
                           ? "Podcast Style"
                           : "Duck Mode"}
+
+                        <button
+                          onClick={() => deletePodcast(podcast.id)}
+                          disabled={isDeleting}
+                          className="podcast-control-btn-sm ml-4 flex items-center justify-center text-red-500 hover:text-red-700 transition-colors"
+                          aria-label="Delete podcast"
+                          title="Delete podcast"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </div>
