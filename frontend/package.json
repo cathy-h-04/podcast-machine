@@ -9,20 +9,27 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@daily-co/daily-react": "^0.22.0",
+    "@radix-ui/react-toast": "1.2.1",
     "@react-router/node": "^7.5.1",
     "@react-router/serve": "^7.5.1",
+    "class-variance-authority": "0.7.0",
     "framer-motion": "^12.7.4",
     "isbot": "^5.1.17",
+    "lucide-react": "^0.439.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router": "^7.5.1"
+    "react-router": "^7.5.1",
+    "tailwind-merge": "2.5.2"
   },
   "devDependencies": {
+    "@daily-co/daily-js": "^0.78.0",
     "@react-router/dev": "^7.5.1",
     "@tailwindcss/vite": "^4.1.4",
     "@types/node": "^20",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
+    "jotai": "^2.12.3",
     "react-router-devtools": "^1.1.0",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.7.2",
