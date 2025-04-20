@@ -225,13 +225,6 @@ def generate_script_route():
         # Clean up the temporary files
         cleanup_temp_files(temp_files)
 
-        # Save podcast information to the database
-        people_count = 1
-        if style == "podcast" or style == "debate":
-            people_count = 2
-        elif style == "duck":
-            people_count = 2
-
         # Use title from settings if available
         title = settings.get("title", filename or "Untitled Podcast")
 
@@ -239,7 +232,6 @@ def generate_script_route():
         podcast = podcasts.save_podcast(
             title=title,
             format=style,
-            people_count=people_count,
             script=script,
             audio_url="#",  # Placeholder URL until we implement actual audio generation
         )

@@ -81,7 +81,7 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       // Redirect to dashboard after successful login
-      navigate("/profile");
+      navigate("/");
     } catch (error) {
       setErrorMessage(
         "Login failed. Please check your credentials and try again."
