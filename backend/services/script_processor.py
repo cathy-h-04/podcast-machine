@@ -126,10 +126,28 @@ class ScriptProcessor:
             # Read the script file
             with open(script_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                
-            # Skip script planning section if present
-            if '<script_planning>' in content:
-                content = content.split('</script_planning>')[-1].strip()
+            
+            # Simple approach: Skip everything before the closing metadata tag
+            # Look for closing tags like </END_OF_METADATA_TAG>, </script_planning>, etc.
+            closing_tag_match = re.search(r'</[^>]+>', content)
+            if closing_tag_match:
+                # Skip everything before and including the closing tag
+                content = content[closing_tag_match.end():].strip()
+                logger.info("Skipped metadata before closing tag")
+            
+            # Find the first actual dialogue line (with speaker pattern)
+            lines = content.split('\n')
+            start_idx = 0
+            for i, line in enumerate(lines):
+                # Look for speaker pattern: [Speaker]: or Speaker:
+                if re.search(r'^\[.*?\]:|^[^\[\]]+:', line.strip()):
+                    start_idx = i
+                    break
+            
+            # Skip everything before the first dialogue line
+            if start_idx > 0:
+                content = '\n'.join(lines[start_idx:])
+                logger.info(f"Skipped {start_idx} non-dialogue lines at the beginning")
         except Exception as e:
             logger.error(f"Error reading script file: {e}")
             return []
@@ -152,8 +170,13 @@ class ScriptProcessor:
                     current_text = []
                 continue
             
+            # Skip lines that look like metadata or planning notes
+            if line.startswith('#') or line.startswith('//') or line.startswith('/*'):
+                continue
+                
             # Check if this is a new speaker line
-            speaker_match = re.match(r'^([^:]+):\s*(.*)', line)
+            # Match both [Speaker]: format and Speaker: format
+            speaker_match = re.match(r'^\[(.*?)\]:\s*(.*)|^([^\[\]]+):\s*(.*)', line)
             if speaker_match:
                 # If we have a previous speaker, add their text
                 if current_speaker and current_text:
@@ -163,8 +186,22 @@ class ScriptProcessor:
                     })
                 
                 # Start new speaker
-                current_speaker = speaker_match.group(1).strip()
-                text_part = speaker_match.group(2).strip()
+                # Handle both [Speaker]: format and Speaker: format
+                if speaker_match.group(1) is not None:  # [Speaker]: format
+                    current_speaker = speaker_match.group(1).strip()
+                    text_part = speaker_match.group(2).strip()
+                else:  # Speaker: format
+                    current_speaker = speaker_match.group(3).strip()
+                    text_part = speaker_match.group(4).strip()
+                
+                # Skip metadata-like speakers or lines that are likely metadata
+                metadata_keywords = ['title', 'guest', 'tone', 'length', 'format', 'topic', 'desired', 'include', 'conversational']
+                if (any(keyword in current_speaker.lower() for keyword in metadata_keywords) or 
+                    len(current_speaker) > 30):  # Overly long speaker names are likely metadata
+                    current_speaker = None
+                    current_text = []
+                    continue
+                    
                 current_text = [text_part] if text_part else []
             else:
                 # Continue with current speaker
