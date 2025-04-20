@@ -38,14 +38,21 @@ export default function Dashboard() {
       try {
         setIsLoading(true);
 
-        // TODO: Replace with actual API endpoint when available
-        // This is a placeholder fetch that would normally get data from your API
-        // const response = await fetch('http://localhost:5111/podcasts');
-        // const data = await response.json();
-        // setPodcasts(data.podcasts);
+        // Fetch podcasts from the backend API
+        const response = await fetch("http://localhost:5000/api/podcasts");
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch podcasts: ${response.status} ${response.statusText}`
+          );
+        }
 
-        // For demonstration, using mock data
-        setTimeout(() => {
+        const data = await response.json();
+        setPodcasts(data.podcasts || []);
+        setIsLoading(false);
+
+        // If there are no podcasts yet, use mock data to demonstrate the UI
+        if (data.podcasts?.length === 0) {
+          console.log("No podcasts found, using mock data for demonstration");
           const mockPodcasts: Podcast[] = [
             {
               id: "1",
@@ -65,32 +72,36 @@ export default function Dashboard() {
               duration: 900, // 15 minutes
               audioUrl: "#",
             },
-            {
-              id: "3",
-              title: "Future of Technology Panel",
-              format: "podcast",
-              peopleCount: "three",
-              createdAt: "2025-04-05T09:15:00Z",
-              duration: 1200, // 20 minutes
-              audioUrl: "#",
-            },
-            {
-              id: "4",
-              title: "Climate Change Debate",
-              format: "debate",
-              peopleCount: "two",
-              createdAt: "2025-03-28T16:20:00Z",
-              duration: 840, // 14 minutes
-              audioUrl: "#",
-            },
           ];
           setPodcasts(mockPodcasts);
-          setIsLoading(false);
-        }, 1000);
+        }
       } catch (err) {
         console.error("Error fetching podcasts:", err);
         setError("Failed to load podcasts. Please try again later.");
         setIsLoading(false);
+
+        // Use mock data as fallback in case of error
+        const mockPodcasts: Podcast[] = [
+          {
+            id: "1",
+            title: "AI Ethics Discussion",
+            format: "debate",
+            peopleCount: "two",
+            createdAt: "2025-04-15T10:30:00Z",
+            duration: 720, // 12 minutes
+            audioUrl: "#",
+          },
+          {
+            id: "2",
+            title: "Introduction to Machine Learning",
+            format: "duck",
+            peopleCount: "two",
+            createdAt: "2025-04-10T14:45:00Z",
+            duration: 900, // 15 minutes
+            audioUrl: "#",
+          },
+        ];
+        setPodcasts(mockPodcasts);
       }
     };
 

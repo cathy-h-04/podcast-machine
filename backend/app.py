@@ -13,13 +13,13 @@ from flask import Flask
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
-from routes import pdf_processing, auth, prompts
+from routes import pdf_processing, auth, prompts, podcasts, audio_generation
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Create Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static")
 
 # Configure CORS to allow requests from localhost:5173
 CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
@@ -69,6 +69,33 @@ def update_prompt(prompt_id):
 @app.route("/api/prompts/<prompt_id>", methods=["DELETE"])
 def delete_prompt(prompt_id):
     return prompts.delete_prompt_route(prompt_id)
+
+
+# Podcast routes
+@app.route("/api/podcasts", methods=["GET"])
+def get_podcasts():
+    return podcasts.get_podcasts_route()
+
+
+@app.route("/api/podcasts/<podcast_id>", methods=["GET"])
+def get_podcast(podcast_id):
+    return podcasts.get_podcast_route(podcast_id)
+
+
+@app.route("/api/podcasts/<podcast_id>", methods=["DELETE"])
+def delete_podcast(podcast_id):
+    return podcasts.delete_podcast_route(podcast_id)
+
+
+# Audio generation routes
+@app.route("/api/generate-audio", methods=["POST"])
+def generate_audio():
+    return audio_generation.generate_audio_route()
+
+
+@app.route("/static/audio/<filename>", methods=["GET"])
+def get_audio(filename):
+    return audio_generation.get_audio_route(filename)
 
 
 if __name__ == "__main__":

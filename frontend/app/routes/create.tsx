@@ -207,6 +207,39 @@ export default function Home() {
       const data = await response.json();
       console.log("Response data:", data);
 
+      // If we have a podcast_id from the script generation, generate audio for it
+      if (data.podcast_id) {
+        try {
+          console.log("Generating audio for podcast ID:", data.podcast_id);
+
+          // Call the audio generation endpoint
+          const audioResponse = await fetch(
+            "http://localhost:5000/api/generate-audio",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                podcast_id: data.podcast_id,
+                script: data.script,
+              }),
+            }
+          );
+
+          if (!audioResponse.ok) {
+            console.error("Error generating audio:", audioResponse.statusText);
+          } else {
+            const audioData = await audioResponse.json();
+            console.log("Audio generated successfully:", audioData);
+          }
+        } catch (audioError) {
+          console.error("Error generating audio:", audioError);
+          // Continue with success message even if audio generation fails
+        }
+      }
+
       // Show success message
       setShowSuccessMessage(true);
 
