@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { motion } from "framer-motion";
+import AudioPlayer from "react-h5-audio-player";
+import "react-h5-audio-player/lib/styles.css";
+import "../styles/player.css";
 
 // Types for our podcast data
 type Podcast = {
@@ -32,6 +35,12 @@ export default function Dashboard() {
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null
   );
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState<{
     type: "success" | "error";
@@ -51,6 +60,90 @@ export default function Dashboard() {
   } | null>(null);
   const [showVideoConfirmation, setShowVideoConfirmation] = useState(false);
   const [podcastForVideo, setPodcastForVideo] = useState<Podcast | null>(null);
+
+  // Skip forward/backward functions
+  const skipForward = () => {
+    if (audioElement) {
+      const newTime = Math.min(audioElement.duration, audioElement.currentTime + 10);
+      audioElement.currentTime = newTime;
+    }
+  };
+
+  const skipBackward = () => {
+    if (audioElement) {
+      const newTime = Math.max(0, audioElement.currentTime - 10);
+      audioElement.currentTime = newTime;
+    }
+  };
+
+  // Add keyboard shortcuts for player
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts if we have a podcast playing
+      if (!currentlyPlaying) return;
+      
+      // Don't trigger shortcuts when typing in input fields
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      switch (e.key) {
+        case " ": // Space bar
+          e.preventDefault();
+          if (audioElement) {
+            if (audioElement.paused) {
+              audioElement.play();
+            } else {
+              audioElement.pause();
+              setCurrentlyPlaying(null);
+            }
+          }
+          break;
+        case "ArrowLeft": // Left arrow
+          e.preventDefault();
+          skipBackward();
+          break;
+        case "ArrowRight": // Right arrow
+          e.preventDefault();
+          skipForward();
+          break;
+        case "m": // Mute toggle
+        case "M": // Mute toggle (capital M)
+          if (audioElement) {
+            if (volume > 0) {
+              setVolume(0);
+              audioElement.volume = 0;
+            } else {
+              setVolume(1);
+              audioElement.volume = 1;
+            }
+          }
+          break;
+        // Number keys for playback speed
+        case "1":
+          handlePlaybackRateChange(0.5);
+          break;
+        case "2":
+          handlePlaybackRateChange(0.75);
+          break;
+        case "3":
+          handlePlaybackRateChange(1);
+          break;
+        case "4":
+          handlePlaybackRateChange(1.25);
+          break;
+        case "5":
+          handlePlaybackRateChange(1.5);
+          break;
+        case "6":
+          handlePlaybackRateChange(2);
+          break;
+      }
+    };
+    
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [currentlyPlaying, audioElement, volume]);
 
   // Fetch podcasts from the server
   useEffect(() => {
@@ -87,59 +180,36 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Handle playing/pausing podcasts
-  const togglePlayPause = async (podcast: Podcast) => {
+  // Handle playing/pausing podcasts - now just sets up the player without playing audio directly
+  const togglePlayPause = (podcast: Podcast) => {
+    // Check if audio URL is valid
+    let audioUrl = podcast.audioUrl;
+    if (audioUrl && !audioUrl.startsWith("http") && audioUrl !== "#") {
+      audioUrl = `http://localhost:5111${audioUrl}`;
+    }
+
+    if (!audioUrl || audioUrl === "#") {
+      setError(
+        "This podcast doesn't have an audio file yet. Please generate audio first."
+      );
+      return;
+    }
+
+    // If we're already playing this podcast, just stop it
     if (currentlyPlaying === podcast.id) {
-      // Pause current audio
       if (audioElement) {
         audioElement.pause();
       }
       setCurrentlyPlaying(null);
+      setCurrentTime(0);
     } else {
       // Stop any currently playing audio
       if (audioElement) {
         audioElement.pause();
       }
-
-      // Construct the full audio URL if it's a relative path
-      let audioUrl = podcast.audioUrl;
-      if (audioUrl && !audioUrl.startsWith("http") && audioUrl !== "#") {
-        audioUrl = `http://localhost:5111${audioUrl}`;
-      }
-
-      // Check if audio URL is valid
-      if (!audioUrl || audioUrl === "#") {
-        setError(
-          "This podcast doesn't have an audio file yet. Please generate audio first."
-        );
-        return;
-      }
-
-      console.log("Attempting to play audio from URL:", audioUrl);
-
-      // Create and play new audio
-      const audio = new Audio(audioUrl);
-
-      // Set up error handling before attempting to play
-      audio.onerror = (e) => {
-        console.error("Audio error:", e);
-        setError("Failed to play audio. The file may be missing or corrupted.");
-        setCurrentlyPlaying(null);
-      };
-
-      // Set up ended handler
-      audio.onended = () => {
-        setCurrentlyPlaying(null);
-      };
-
-      try {
-        await audio.play();
-        setAudioElement(audio);
-        setCurrentlyPlaying(podcast.id);
-      } catch (err) {
-        console.error("Error playing audio:", err);
-        setError("Failed to play audio. The file may be missing or corrupted.");
-      }
+      
+      // Just set the current podcast - the AudioPlayer component will handle playback
+      setCurrentlyPlaying(podcast.id);
     }
   };
 
@@ -148,6 +218,51 @@ export default function Dashboard() {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
+
+  // Format time for player display (adds hours if needed)
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds)) return "0:00";
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Handle seeking in the audio
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const seekTime = parseFloat(e.target.value);
+    if (audioElement) {
+      audioElement.currentTime = seekTime;
+      setCurrentTime(seekTime);
+    }
+  };
+
+  // Handle volume change
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (audioElement) {
+      audioElement.volume = newVolume;
+    }
+  };
+
+  // Handle playback rate change
+  const handlePlaybackRateChange = (rate: number) => {
+    setPlaybackRate(rate);
+    if (audioElement) {
+      audioElement.playbackRate = rate;
+    }
+  };
+
+  // Get currently playing podcast
+  const getCurrentPodcast = (): Podcast | undefined => {
+    return podcasts.find(podcast => podcast.id === currentlyPlaying);
   };
 
   // Format creation date
@@ -646,6 +761,16 @@ export default function Dashboard() {
                       </div>
                     </div>
 
+                    {/* Mini progress indicator (only for currently playing podcast) */}
+                    {currentlyPlaying === podcast.id && (
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 h-1 mb-3">
+                        <div 
+                          className="bg-indigo-600 h-1" 
+                          style={{ width: `${(currentTime / (duration || podcast.duration)) * 100}%` }}
+                        ></div>
+                      </div>
+                    )}
+
                     <div className="mt-auto flex items-center justify-between">
                       <div className="flex items-center">
                         <button
@@ -916,6 +1041,246 @@ export default function Dashboard() {
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Professional Player Bar */}
+      {currentlyPlaying && getCurrentPodcast() && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
+          <div className="container mx-auto max-w-6xl px-4 py-2">
+            <div className="flex items-center">
+              {/* Podcast info */}
+              <div className="flex items-center mr-4 w-64 shrink-0">
+                {getCurrentPodcast()?.cover_url ? (
+                  <img 
+                    src={`http://localhost:5111${getCurrentPodcast()?.cover_url}`}
+                    alt="Cover art" 
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white rounded">
+                    <div className="text-xl">
+                      {getFormatIcon(getCurrentPodcast()?.format || "podcast")}
+                    </div>
+                  </div>
+                )}
+                <div className="ml-3 truncate">
+                  <div className="font-medium text-gray-900 dark:text-white truncate">
+                    {getCurrentPodcast()?.title}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatTime(currentTime)} / {formatTime(duration || getCurrentPodcast()?.duration || 0)}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Professional Audio Player */}
+              <div className="flex-1">
+                <AudioPlayer
+                  ref={(player) => {
+                    if (player) {
+                      setAudioElement(player.audio.current);
+                    }
+                  }}
+                  src={getCurrentPodcast()?.audioUrl?.startsWith('http') 
+                    ? getCurrentPodcast()?.audioUrl 
+                    : `http://localhost:5111${getCurrentPodcast()?.audioUrl}`}
+                  autoPlay
+                  showSkipControls
+                  showJumpControls
+                  showFilledVolume
+                  customAdditionalControls={[
+                    <div key="playback-rate" className="relative">
+                      <button 
+                        onClick={() => setIsPlayerExpanded(!isPlayerExpanded)}
+                        className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded"
+                      >
+                        {playbackRate}x
+                      </button>
+                      
+                      {isPlayerExpanded && (
+                        <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 w-32 z-10">
+                          <div className="flex flex-col space-y-2">
+                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(rate => (
+                              <button
+                                key={rate}
+                                onClick={() => {
+                                  handlePlaybackRateChange(rate);
+                                  setIsPlayerExpanded(false);
+                                }}
+                                className={`text-sm py-1 px-2 rounded ${
+                                  playbackRate === rate
+                                    ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                                    : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                }`}
+                              >
+                                {rate}x
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>,
+                    <button 
+                      key="mark-listened"
+                      onClick={() => toggleListened(getCurrentPodcast()!.id)}
+                      disabled={isTogglingListened}
+                      className={`ml-2 p-1 rounded-full ${
+                        getCurrentPodcast()?.listened
+                          ? "text-gray-400 hover:text-gray-600"
+                          : "text-green-500 hover:text-green-700"
+                      } transition-colors`}
+                      aria-label={getCurrentPodcast()?.listened ? "Mark as unlistened" : "Mark as listened"}
+                      title={getCurrentPodcast()?.listened ? "Mark as unlistened" : "Mark as listened"}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </button>
+                  ]}
+                  onPlay={() => {
+                    // Update our state to match the library's state
+                    setCurrentlyPlaying(getCurrentPodcast()!.id);
+                  }}
+                  onPause={() => {
+                    // We'll keep the currentlyPlaying state so the player stays visible
+                  }}
+                  onEnded={() => {
+                    setCurrentlyPlaying(null);
+                    setCurrentTime(0);
+                  }}
+                  onListen={(e) => {
+                    if (e.target) {
+                      setCurrentTime((e.target as HTMLAudioElement).currentTime);
+                    }
+                  }}
+                  onLoadedMetaData={(e) => {
+                    if (e.target) {
+                      setDuration((e.target as HTMLAudioElement).duration);
+                    }
+                  }}
+                  onVolumeChange={(e) => {
+                    if (e.target) {
+                      setVolume((e.target as HTMLAudioElement).volume);
+                    }
+                  }}
+                  listenInterval={1000}
+                  volume={volume}
+                  progressJumpStep={10000}
+                  progressUpdateInterval={100}
+                  className="rhap_container-custom"
+                  layout="horizontal-reverse"
+                />
+              </div>
+              
+              {/* Keyboard shortcuts button */}
+              <button 
+                onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
+                className="ml-2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                aria-label="Keyboard shortcuts"
+                title="Keyboard shortcuts"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+              </button>
+              
+              {/* Close button */}
+              <button 
+                onClick={() => {
+                  if (audioElement) {
+                    audioElement.pause();
+                  }
+                  setCurrentlyPlaying(null);
+                }}
+                className="ml-2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                aria-label="Close player"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      {showKeyboardShortcuts && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Keyboard Shortcuts
+              </h3>
+              <button
+                onClick={() => setShowKeyboardShortcuts(false)}
+                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                aria-label="Close"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                <span className="font-medium text-gray-700 dark:text-gray-300">Space</span>
+                <span className="text-gray-600 dark:text-gray-400">Play / Pause</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                <span className="font-medium text-gray-700 dark:text-gray-300">Left Arrow</span>
+                <span className="text-gray-600 dark:text-gray-400">Rewind 10 seconds</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                <span className="font-medium text-gray-700 dark:text-gray-300">Right Arrow</span>
+                <span className="text-gray-600 dark:text-gray-400">Forward 10 seconds</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                <span className="font-medium text-gray-700 dark:text-gray-300">M</span>
+                <span className="text-gray-600 dark:text-gray-400">Mute / Unmute</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                <span className="font-medium text-gray-700 dark:text-gray-300">1-6</span>
+                <span className="text-gray-600 dark:text-gray-400">Change playback speed</span>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setShowKeyboardShortcuts(false)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+              >
+                Got it
               </button>
             </div>
           </div>
