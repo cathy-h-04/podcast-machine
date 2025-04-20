@@ -17,6 +17,18 @@ logger = logging.getLogger('pdf_processing')
 
 # Store progress information for each script generation process
 script_progress_data = {}
+import anthropic
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Initialize Claude client
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+if not ANTHROPIC_API_KEY:
+    raise ValueError("ANTHROPIC_API_KEY environment variable is required")
+
+claude_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
 def allowed_file(filename):
@@ -326,10 +338,63 @@ def generate_script_route():
             # No files (shouldn't happen)
             filename = None
 
-        # Generate script using Claude
-        script, settings = script_generation.generate_script(
-            pdf_contents, style, user_message, filename
-        )
+        # Generate script using Claude with tool use for PDF analysis
+        try:
+            print("Using Claude with tool use for PDF analysis")
+            # Prepare the message for Claude
+            prompt = f"Analyze this PDF content and extract the key information for a {style} script"
+            
+            # Call Claude with the repl tool
+            response = claude_client.messages.create(
+                model="claude-3-opus-20240229",
+                max_tokens=4000,
+                messages=[{
+                    "role": "user", 
+                    "content": [
+                        {"type": "text", "text": prompt}
+                    ] + [{
+                        "type": "image", 
+                        "source": {"type": "file", "media_type": "application/pdf", "path": pdf_file["path"]}
+                    } for pdf_file in pdf_contents]
+                }],
+                tools=[
+                    {
+                        "name": "repl",
+                        "description": "Execute JavaScript code to analyze PDF content",
+                        "input_schema": {
+                            "type": "object",
+                            "properties": {
+                                "code": {"type": "string"}
+                            },
+                            "required": ["code"]
+                        }
+                    }
+                ]
+            )
+            
+            # Extract the script and any tool use information
+            script = response.content[0].text
+            
+            # Check if tools were used and log the information
+            tool_use_info = ""
+            for content in response.content:
+                if hasattr(content, 'tool_use'):
+                    tool_use_info += f"Tool used: {content.tool_use.name}\n"
+                    tool_use_info += f"Code executed: {content.tool_use.input.get('code', 'No code')}\n"
+                    
+            if tool_use_info:
+                print(f"Tool use information:\n{tool_use_info}")
+                
+            # Generate settings based on the script
+            settings = script_generation.extract_settings_from_script(script, filename)
+            
+        except Exception as e:
+            print(f"Error using Claude with tool use: {str(e)}")
+            print("Falling back to standard script generation")
+            # Fall back to the original method if tool use fails
+            script, settings = script_generation.generate_script(
+                pdf_contents, style, user_message, filename
+            )
 
         # Clean up the temporary files
         cleanup_temp_files(temp_files)
