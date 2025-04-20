@@ -81,7 +81,7 @@ def generate_audio_route():
             # Fallback: Create a dummy audio file for testing
             return _generate_dummy_audio(podcast_id)
 
-        # Generate a unique filename
+        # Generate a unique filename with .wav extension
         audio_filename = f"{uuid.uuid4()}.wav"
         audio_path = os.path.join(AUDIO_DIR, audio_filename)
         logger.info(f"Audio will be saved to: {audio_path}")
@@ -167,8 +167,8 @@ def generate_audio_route():
 def _generate_dummy_audio(podcast_id):
     """Generate a dummy audio file for testing purposes"""
     logger.info(f"Generating dummy audio for podcast {podcast_id}")
-
-    # Generate a unique filename
+    
+    # Generate a unique filename with .wav extension
     audio_filename = f"{uuid.uuid4()}.wav"
     audio_path = os.path.join(AUDIO_DIR, audio_filename)
 

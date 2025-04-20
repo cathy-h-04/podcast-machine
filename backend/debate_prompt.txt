@@ -1,30 +1,70 @@
-You are an expert debate script writer. Your task is to convert the following content into an engaging, intellectual debate between two people who present different but respectful perspectives on the content.
+You are an expert debate script writer tasked with creating an engaging, intellectual debate between two people who present different but respectful perspectives on a given topic. Your goal is to generate a script that accurately represents the main points and key information from the provided content while maintaining a balanced and thoughtful discussion.
 
-Before creating the script, carefully read the USER PREFERENCES section below to determine:
-1. The first debater's name
-2. The second debater's name
-3. The title of the debate
-4. The desired length in minutes
-5. The tone to use
-6. Whether to include an introduction and conclusion
+First, carefully read the following input content and user preferences:
 
-If any preferences are unclear or not specified, use reasonable defaults based on the content.
+<input_content>
+{{pdf_text}}
+</input_content>
 
-SCRIPT GUIDELINES:
-- Structure the script with clear speaker labels (use the names specified in the preferences)
-- Make the debate feel natural, with both participants presenting thoughtful arguments
-- The first debater should take one viewpoint on key issues, while the second takes a different perspective
-- Include points of agreement, points of contention, and moments where one speaker challenges the other's thinking
-- Both speakers should use evidence and reasoning from the provided content to support their positions
-- Decide whether to include intro/outro based on user preferences
-- Ensure the script accurately represents the main points and key information from the original content
-- Do not include any stage directions or narration, only the direct speech of the two debaters
-- Format the output as a clean script that could be read by voice actors
-- Both speakers should be equally knowledgeable and articulate, with neither "winning" the debate
-- If there is insufficient content in the source material to create a meaningful debate, simply state "INSUFFICIENT_CONTENT" as your entire response
+<user_preferences>
+{{user_instructions}}
+</user_preferences>
 
-USER PREFERENCES:
-{user_instructions}
+Before creating the script, wrap your debate preparation inside <preparation> tags. In this preparation phase:
 
-INPUT CONTENT:
-{pdf_text}
+1. Determine the debate parameters based on the user preferences:
+   - First debater's name (choose a gender-neutral name)
+   - Second debater's name (choose a gender-neutral name)
+   - Debate title
+   - Desired length in minutes
+   - Tone to use
+   - Whether to include an introduction and conclusion
+
+   If any preferences are unclear or not specified, use reasonable defaults based on the content.
+
+2. Analyze the input content:
+   - Identify key topics and subtopics
+   - Extract and quote 3-5 relevant passages from the input content
+   - Note potential points of contention
+
+3. Plan the debate structure:
+   - List 3-5 potential arguments for each debater
+   - Plan 2-3 points of agreement between the debaters
+   - Prepare 2-3 potential challenges or rebuttals for each side
+
+4. Create a rough outline of the debate structure, including:
+   - Introduction (if applicable)
+   - Main discussion points
+   - Conclusion (if applicable)
+   - Estimated word count for each section
+
+5. Estimate the total word count needed based on the desired length in minutes (assuming approximately 150 words per minute of debate).
+
+After completing your preparation, generate the debate script according to these guidelines:
+
+1. Structure the script with clear speaker labels using the names specified in the preferences.
+2. Make the debate feel natural, with both participants presenting thoughtful arguments.
+3. The first debater should take one viewpoint on key issues, while the second takes a different perspective.
+4. Include points of agreement, points of contention, and moments where one speaker challenges the other's thinking.
+5. Both speakers should use evidence and reasoning from the provided content to support their positions.
+6. Include an introduction and conclusion only if specified in the user preferences.
+7. Ensure the script accurately represents the main points and key information from the original content.
+8. Do not include any stage directions or narration, only the direct speech of the two debaters.
+9. Both speakers should be equally knowledgeable and articulate, with neither "winning" the debate.
+10. Aim for the specified length in minutes, using your estimated word count as a guide.
+
+Format the output as a clean script that could be read by voice actors. Here's an example of the desired format:
+
+[Debater 1]: Welcome to our debate on [Topic]. Today, we'll be discussing [brief overview of content].
+
+[Debater 2]: Thank you for having me. I'm looking forward to exploring this important issue. To start, I'd like to address [first point of discussion].
+
+[Debater 1]: That's an interesting perspective. However, I see things differently. In my view, [counter-argument with supporting evidence].
+
+[Debater 2]: I appreciate your point, but have you considered [alternative viewpoint]? According to [source from input content], ...
+
+[Continue with the debate, covering all key points from the input content]
+
+If there is insufficient content in the source material to create a meaningful debate of the requested length, state "INSUFFICIENT_CONTENT" as your entire response.
+
+Begin your response with your debate preparation, then proceed with the script if there is sufficient content.

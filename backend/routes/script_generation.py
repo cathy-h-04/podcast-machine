@@ -174,3 +174,40 @@ If any preferences are not specified, use reasonable defaults.
     print(f"Generated script written to {output_filename}")
 
     return generated_script, settings
+
+
+def extract_settings_from_script(script, filename=None):
+    """Extract settings from a generated script"""
+    settings = {}
+    
+    # Set a default title based on filename if available
+    if filename:
+        settings["title"] = filename
+    else:
+        settings["title"] = "Untitled Podcast"
+    
+    # Try to extract a better title from the script
+    lines = script.split('\n')
+    for line in lines[:10]:  # Check first 10 lines for a title
+        if line.strip().startswith('#') or line.strip().startswith('Title:'):
+            # Found a title line
+            title = line.strip().replace('#', '').replace('Title:', '').strip()
+            if title:  # If title is not empty
+                settings["title"] = title
+                break
+    
+    # Extract other potential settings
+    settings["host_name"] = "Host"
+    settings["guest_name"] = "Guest"
+    
+    # Look for host/guest names in the script
+    for line in lines[:30]:  # Check first 30 lines
+        if ':' in line:
+            speaker = line.split(':', 1)[0].strip()
+            if speaker and speaker != settings["host_name"] and speaker != settings["guest_name"]:
+                if settings["host_name"] == "Host":
+                    settings["host_name"] = speaker
+                elif settings["guest_name"] == "Guest":
+                    settings["guest_name"] = speaker
+    
+    return settings

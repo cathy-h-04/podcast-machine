@@ -137,10 +137,10 @@ export default function Dashboard() {
       }
 
       console.log("Attempting to play audio from URL:", audioUrl);
-
+      
       // Create and play new audio
       const audio = new Audio(audioUrl);
-
+      
       // Set up error handling before attempting to play
       audio.onerror = (e) => {
         console.error("Audio error:", e);
