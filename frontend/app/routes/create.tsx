@@ -214,7 +214,7 @@ export default function Home() {
 
           // Call the audio generation endpoint
           const audioResponse = await fetch(
-            "http://localhost:5000/api/generate-audio",
+            "http://localhost:5111/api/generate-audio",
             {
               method: "POST",
               headers: {

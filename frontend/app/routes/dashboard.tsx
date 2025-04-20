@@ -39,7 +39,7 @@ export default function Dashboard() {
         setIsLoading(true);
 
         // Fetch podcasts from the backend API
-        const response = await fetch("http://localhost:5000/api/podcasts");
+        const response = await fetch("http://localhost:5111/api/podcasts");
         if (!response.ok) {
           throw new Error(
             `Failed to fetch podcasts: ${response.status} ${response.statusText}`
