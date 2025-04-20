@@ -1,0 +1,169 @@
+/* Custom styles for react-h5-audio-player */
+.rhap_container {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.rhap_container-custom {
+  width: 100%;
+}
+
+.rhap_progress-section {
+  flex: 1 1 auto;
+}
+
+.rhap_controls-section {
+  flex: 0 0 auto;
+}
+
+/* Progress bar styling */
+.rhap_progress-bar {
+  height: 6px !important;
+  background-color: #e2e8f0 !important;
+}
+
+.dark .rhap_progress-bar {
+  background-color: #374151 !important;
+}
+
+.rhap_progress-filled {
+  background-color: #4f46e5 !important;
+}
+
+.dark .rhap_progress-filled {
+  background-color: #6366f1 !important;
+}
+
+.rhap_progress-indicator {
+  width: 14px !important;
+  height: 14px !important;
+  top: -4px !important;
+  background-color: #4f46e5 !important;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark .rhap_progress-indicator {
+  background-color: #6366f1 !important;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Button styling */
+.rhap_main-controls-button,
+.rhap_volume-button,
+.rhap_additional-controls button {
+  color: #4b5563 !important;
+}
+
+.dark .rhap_main-controls-button,
+.dark .rhap_volume-button,
+.dark .rhap_additional-controls button {
+  color: #d1d5db !important;
+}
+
+.rhap_play-pause-button {
+  font-size: 32px !important;
+  width: 40px !important;
+  height: 40px !important;
+  background-color: #4f46e5 !important;
+  color: white !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.dark .rhap_play-pause-button {
+  background-color: #6366f1 !important;
+}
+
+.rhap_play-pause-button:hover {
+  background-color: #4338ca !important;
+}
+
+.dark .rhap_play-pause-button:hover {
+  background-color: #4f46e5 !important;
+}
+
+/* Volume control */
+.rhap_volume-controls {
+  justify-content: flex-end !important;
+  margin-left: 15px !important;
+}
+
+.rhap_volume-bar {
+  width: 60px !important;
+  height: 4px !important;
+  background-color: #e2e8f0 !important;
+}
+
+.dark .rhap_volume-bar {
+  background-color: #374151 !important;
+}
+
+.rhap_volume-indicator {
+  width: 12px !important;
+  height: 12px !important;
+  top: -4px !important;
+  background-color: #4f46e5 !important;
+}
+
+.dark .rhap_volume-indicator {
+  background-color: #6366f1 !important;
+}
+
+.rhap_volume-filled {
+  background-color: #4f46e5 !important;
+}
+
+.dark .rhap_volume-filled {
+  background-color: #6366f1 !important;
+}
+
+/* Time display */
+.rhap_time {
+  color: #6b7280 !important;
+  font-size: 12px !important;
+}
+
+.dark .rhap_time {
+  color: #9ca3af !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .rhap_volume-controls {
+    display: none !important;
+  }
+  
+  .rhap_progress-section {
+    flex-direction: column !important;
+  }
+  
+  .rhap_time {
+    margin: 0 !important;
+    padding-top: 4px !important;
+  }
+}
+
+/* Skip buttons */
+.rhap_skip-button {
+  color: #4b5563 !important;
+}
+
+.dark .rhap_skip-button {
+  color: #d1d5db !important;
+}
+
+.rhap_skip-button:hover {
+  color: #4f46e5 !important;
+}
+
+.dark .rhap_skip-button:hover {
+  color: #6366f1 !important;
+}
+
+/* Layout adjustments */
+.rhap_horizontal-reverse .rhap_controls-section {
+  margin-bottom: 0 !important;
+}
