@@ -29,15 +29,28 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
+    null
+  );
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteMessage, setDeleteMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [podcastToRename, setPodcastToRename] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
-  const [renameMessage, setRenameMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [renameMessage, setRenameMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [isTogglingListened, setIsTogglingListened] = useState(false);
-  const [listenedMessage, setListenedMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [listenedMessage, setListenedMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [showVideoConfirmation, setShowVideoConfirmation] = useState(false);
+  const [podcastForVideo, setPodcastForVideo] = useState<Podcast | null>(null);
 
   // Fetch podcasts from the server
   useEffect(() => {
@@ -111,13 +124,15 @@ export default function Dashboard() {
 
       // Construct the full audio URL if it's a relative path
       let audioUrl = podcast.audioUrl;
-      if (audioUrl && !audioUrl.startsWith('http') && audioUrl !== '#') {
+      if (audioUrl && !audioUrl.startsWith("http") && audioUrl !== "#") {
         audioUrl = `http://localhost:5111${audioUrl}`;
       }
-      
+
       // Check if audio URL is valid
-      if (!audioUrl || audioUrl === '#') {
-        setError("This podcast doesn't have an audio file yet. Please generate audio first.");
+      if (!audioUrl || audioUrl === "#") {
+        setError(
+          "This podcast doesn't have an audio file yet. Please generate audio first."
+        );
         return;
       }
 
@@ -132,12 +147,12 @@ export default function Dashboard() {
         setError("Failed to play audio. The file may be missing or corrupted.");
         setCurrentlyPlaying(null);
       };
-      
+
       // Set up ended handler
       audio.onended = () => {
         setCurrentlyPlaying(null);
       };
-      
+
       try {
         await audio.play();
         setAudioElement(audio);
@@ -165,36 +180,43 @@ export default function Dashboard() {
       day: "numeric",
     }).format(date);
   };
-  
+
   // Delete podcast function
   const deletePodcast = async (podcastId: string) => {
-    if (!confirm("Are you sure you want to delete this podcast? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this podcast? This action cannot be undone."
+      )
+    ) {
       return;
     }
-    
+
     setIsDeleting(true);
     setDeleteMessage(null);
-    
+
     try {
       // Get token from localStorage
       const token = localStorage.getItem("token");
-      
-      const response = await fetch(`http://localhost:5111/api/podcasts/${podcastId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
+
+      const response = await fetch(
+        `http://localhost:5111/api/podcasts/${podcastId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       if (response.ok) {
         // Remove the podcast from the state
-        setPodcasts(podcasts.filter(podcast => podcast.id !== podcastId));
+        setPodcasts(podcasts.filter((podcast) => podcast.id !== podcastId));
         setDeleteMessage({
           type: "success",
-          text: "Podcast deleted successfully"
+          text: "Podcast deleted successfully",
         });
-        
+
         // If this podcast was playing, stop it
         if (currentlyPlaying === podcastId && audioElement) {
           audioElement.pause();
@@ -204,20 +226,20 @@ export default function Dashboard() {
         const errorData = await response.json();
         setDeleteMessage({
           type: "error",
-          text: errorData.error || "Failed to delete podcast"
+          text: errorData.error || "Failed to delete podcast",
         });
       }
     } catch (error) {
       setDeleteMessage({
         type: "error",
-        text: "An error occurred while deleting the podcast"
+        text: "An error occurred while deleting the podcast",
       });
       console.error("Error deleting podcast:", error);
     } finally {
       setIsDeleting(false);
     }
   };
-  
+
   // Open rename modal
   const openRenameModal = (podcastId: string, currentTitle: string) => {
     setPodcastToRename(podcastId);
@@ -225,50 +247,57 @@ export default function Dashboard() {
     setIsRenaming(true);
     setRenameMessage(null);
   };
-  
+
   // Close rename modal
   const closeRenameModal = () => {
     setPodcastToRename(null);
     setNewTitle("");
     setIsRenaming(false);
   };
-  
+
   // Rename podcast function
   const renamePodcast = async () => {
     if (!podcastToRename || !newTitle.trim()) {
       setRenameMessage({
         type: "error",
-        text: "Please enter a valid title"
+        text: "Please enter a valid title",
       });
       return;
     }
-    
+
     try {
       // Get token from localStorage
       const token = localStorage.getItem("token");
-      
-      const response = await fetch(`http://localhost:5111/api/podcasts/${podcastToRename}/title`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ title: newTitle }),
-      });
-      
+
+      const response = await fetch(
+        `http://localhost:5111/api/podcasts/${podcastToRename}/title`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ title: newTitle }),
+        }
+      );
+
       if (response.ok) {
         const data = await response.json();
-        
+
         // Update the podcast in the state
-        setPodcasts(podcasts.map(podcast => 
-          podcast.id === podcastToRename ? {...podcast, title: newTitle} : podcast
-        ));
-        
+        setPodcasts(
+          podcasts.map((podcast) =>
+            podcast.id === podcastToRename
+              ? { ...podcast, title: newTitle }
+              : podcast
+          )
+        );
+
         setRenameMessage({
           type: "success",
-          text: "Podcast renamed successfully"
+          text: "Podcast renamed successfully",
         });
-        
+
         // Close the modal after a short delay
         setTimeout(() => {
           closeRenameModal();
@@ -278,49 +307,58 @@ export default function Dashboard() {
         const errorData = await response.json();
         setRenameMessage({
           type: "error",
-          text: errorData.error || "Failed to rename podcast"
+          text: errorData.error || "Failed to rename podcast",
         });
       }
     } catch (error) {
       setRenameMessage({
         type: "error",
-        text: "An error occurred while renaming the podcast"
+        text: "An error occurred while renaming the podcast",
       });
       console.error("Error renaming podcast:", error);
     }
   };
-  
+
   // Toggle podcast listened status
   const toggleListened = async (podcastId: string) => {
     setIsTogglingListened(true);
     setListenedMessage(null);
-    
+
     try {
       // Get token from localStorage
       const token = localStorage.getItem("token");
-      
-      const response = await fetch(`http://localhost:5111/api/podcasts/${podcastId}/listened`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+
+      const response = await fetch(
+        `http://localhost:5111/api/podcasts/${podcastId}/listened`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
-      
+      );
+
       if (response.ok) {
         const data = await response.json();
         const updatedPodcast = data.podcast;
-        
+
         // Update the podcast in the state
-        setPodcasts(podcasts.map(podcast => 
-          podcast.id === podcastId ? {...podcast, listened: updatedPodcast.listened} : podcast
-        ));
-        
+        setPodcasts(
+          podcasts.map((podcast) =>
+            podcast.id === podcastId
+              ? { ...podcast, listened: updatedPodcast.listened }
+              : podcast
+          )
+        );
+
         setListenedMessage({
           type: "success",
-          text: `Podcast marked as ${updatedPodcast.listened ? 'listened' : 'unlistened'}`
+          text: `Podcast marked as ${
+            updatedPodcast.listened ? "listened" : "unlistened"
+          }`,
         });
-        
+
         // Clear message after a short delay
         setTimeout(() => {
           setListenedMessage(null);
@@ -329,17 +367,79 @@ export default function Dashboard() {
         const errorData = await response.json();
         setListenedMessage({
           type: "error",
-          text: errorData.error || "Failed to update listened status"
+          text: errorData.error || "Failed to update listened status",
         });
       }
     } catch (error) {
       setListenedMessage({
         type: "error",
-        text: "An error occurred while updating listened status"
+        text: "An error occurred while updating listened status",
       });
       console.error("Error updating listened status:", error);
     } finally {
       setIsTogglingListened(false);
+    }
+  };
+
+  // Open video conference confirmation modal
+  const openVideoConfirmation = (podcast: Podcast) => {
+    setPodcastForVideo(podcast);
+    setShowVideoConfirmation(true);
+  };
+
+  // Close video conference confirmation modal
+  const closeVideoConfirmation = () => {
+    setShowVideoConfirmation(false);
+    setPodcastForVideo(null);
+  };
+
+  // Join video conference
+  const joinVideoConference = async () => {
+    try {
+      // Start a conversation with the replica API
+      if (podcastForVideo) {
+        try {
+          // Get token from localStorage
+          const token = localStorage.getItem("token");
+
+          const response = await fetch(
+            "http://localhost:5111/api/conversations",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ podcast_id: podcastForVideo.id }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed to start conversation with replica");
+          }
+
+          const data = await response.json();
+
+          if (data.success && data.conversation_url) {
+            // Open the conversation URL in a new tab
+            console.log(data.conversation_url);
+            window.open(data.conversation_url, "_blank");
+            setShowVideoConfirmation(false);
+          } else {
+            throw new Error("Invalid response from replica service");
+          }
+        } catch (error) {
+          console.error("Error starting conversation:", error);
+          setError(
+            "Failed to start conversation with the audio replica. Please try again."
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Error accessing media devices:", err);
+      setError(
+        "Please allow access to camera and microphone to join the video conference."
+      );
     }
   };
 
@@ -398,17 +498,27 @@ export default function Dashboard() {
       <main className="container mx-auto max-w-6xl px-4 py-8">
         {/* Status messages */}
         {(deleteMessage || listenedMessage) && (
-          <div className={`mb-4 p-4 rounded-lg ${(deleteMessage?.type === 'success' || listenedMessage?.type === 'success') ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'}`}>
+          <div
+            className={`mb-4 p-4 rounded-lg ${
+              deleteMessage?.type === "success" ||
+              listenedMessage?.type === "success"
+                ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400"
+                : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400"
+            }`}
+          >
             <div className="flex items-center">
               <span className="mr-2">
-                {(deleteMessage?.type === 'success' || listenedMessage?.type === 'success') ? '✓' : '⚠️'}
+                {deleteMessage?.type === "success" ||
+                listenedMessage?.type === "success"
+                  ? "✓"
+                  : "⚠️"}
               </span>
               <p>{deleteMessage?.text || listenedMessage?.text}</p>
-              <button 
+              <button
                 onClick={() => {
                   setDeleteMessage(null);
                   setListenedMessage(null);
-                }} 
+                }}
                 className="ml-auto text-sm font-medium"
                 aria-label="Dismiss"
               >
@@ -417,7 +527,7 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-        
+
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
@@ -493,13 +603,15 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`podcast-card flex flex-col sm:flex-row bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700 ${podcast.listened ? 'opacity-75 dark:opacity-60' : ''}`}
+                  className={`podcast-card flex flex-col sm:flex-row bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700 ${
+                    podcast.listened ? "opacity-75 dark:opacity-60" : ""
+                  }`}
                 >
                   {/* Left part (album art / podcast type) */}
                   <div className="w-full sm:w-48 h-48 relative overflow-hidden">
                     {podcast.cover_url ? (
-                      <img 
-                        src={`http://localhost:5111${podcast.cover_url}`} 
+                      <img
+                        src={`http://localhost:5111${podcast.cover_url}`}
                         alt={`Cover art for ${podcast.title}`}
                         className="w-full h-full object-cover"
                       />
@@ -600,10 +712,11 @@ export default function Dashboard() {
                         </button>
 
                         <a
-                          href={podcast.audioUrl}
+                          href={`http://localhost:5111${podcast.audioUrl}`}
                           download
                           className="podcast-control-btn-sm ml-2 flex items-center justify-center"
                           aria-label="Download"
+                          target="_blank"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -620,7 +733,7 @@ export default function Dashboard() {
                             />
                           </svg>
                         </a>
-                        
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -646,16 +759,28 @@ export default function Dashboard() {
                             />
                           </svg>
                         </button>
-                        
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleListened(podcast.id);
                           }}
                           disabled={isTogglingListened}
-                          className={`podcast-control-btn-sm ml-2 flex items-center justify-center ${podcast.listened ? 'text-gray-400 hover:text-gray-600' : 'text-green-500 hover:text-green-700'} transition-colors`}
-                          aria-label={podcast.listened ? "Mark as unlistened" : "Mark as listened"}
-                          title={podcast.listened ? "Mark as unlistened" : "Mark as listened"}
+                          className={`podcast-control-btn-sm ml-2 flex items-center justify-center ${
+                            podcast.listened
+                              ? "text-gray-400 hover:text-gray-600"
+                              : "text-green-500 hover:text-green-700"
+                          } transition-colors`}
+                          aria-label={
+                            podcast.listened
+                              ? "Mark as unlistened"
+                              : "Mark as listened"
+                          }
+                          title={
+                            podcast.listened
+                              ? "Mark as unlistened"
+                              : "Mark as listened"
+                          }
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -672,20 +797,16 @@ export default function Dashboard() {
                             />
                           </svg>
                         </button>
-                        
+
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deletePodcast(podcast.id);
-                          }}
-                          disabled={isDeleting}
-                          className="podcast-control-btn-sm ml-2 flex items-center justify-center text-red-500 hover:text-red-700 transition-colors"
-                          aria-label="Delete podcast"
-                          title="Delete podcast"
+                          onClick={() => openVideoConfirmation(podcast)}
+                          className="podcast-control-btn ml-2"
+                          aria-label="Video Chat"
+                          title="Join video chat about this podcast"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5"
+                            className="h-6 w-6"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -694,7 +815,7 @@ export default function Dashboard() {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                             />
                           </svg>
                         </button>
@@ -724,26 +845,47 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Rename Podcast</h3>
-              <button 
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Rename Podcast
+              </h3>
+              <button
                 onClick={closeRenameModal}
                 className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
                 aria-label="Close"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
-            
+
             {renameMessage && (
-              <div className={`mb-4 p-3 rounded-md ${renameMessage.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'}`}>
+              <div
+                className={`mb-4 p-3 rounded-md ${
+                  renameMessage.type === "success"
+                    ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                    : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
+                }`}
+              >
                 <p>{renameMessage.text}</p>
               </div>
             )}
-            
+
             <div className="mb-4">
-              <label htmlFor="new-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor="new-title"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 New Title
               </label>
               <input
@@ -755,7 +897,7 @@ export default function Dashboard() {
                 placeholder="Enter new title"
               />
             </div>
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={closeRenameModal}
@@ -768,6 +910,60 @@ export default function Dashboard() {
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Conference Confirmation Modal */}
+      {showVideoConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Join Video Discussion
+              </h3>
+              <button
+                onClick={closeVideoConfirmation}
+                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                aria-label="Close"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700 dark:text-gray-300">
+                Would you like to join a video discussion about "
+                {podcastForVideo?.title}"?
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={closeVideoConfirmation}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={joinVideoConference}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Join
               </button>
             </div>
           </div>

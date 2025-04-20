@@ -125,7 +125,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   Home
                 </Link>
                 <Link
-                  to="/dashboard"
+                  to="/"
                   className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >

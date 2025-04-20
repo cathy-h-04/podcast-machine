@@ -12,7 +12,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
-from routes import pdf_processing, auth, podcasts, audio_generation, cover_art_generation
+from routes import (
+    pdf_processing,
+    auth,
+    podcasts,
+    audio_generation,
+    cover_art_generation,
+    replica,
+)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -31,6 +38,7 @@ app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20MB limit
 @app.route("/generate", methods=["POST"])
 def generate_script():
     return pdf_processing.generate_script_route()
+
 
 @app.route("/api/script-progress/<process_id>", methods=["GET"])
 def get_script_progress(process_id):
@@ -76,25 +84,25 @@ def delete_podcast(podcast_id):
 def update_podcast_title(podcast_id):
     data = request.get_json()
     new_title = data.get("title")
-    
+
     if not new_title:
         return jsonify({"error": "Title is required"}), 400
-        
+
     updated_podcast = podcasts.update_podcast_title(podcast_id, new_title)
-    
+
     if not updated_podcast:
         return jsonify({"error": "Podcast not found"}), 404
-        
+
     return jsonify({"success": True, "podcast": updated_podcast})
 
 
 @app.route("/api/podcasts/<podcast_id>/listened", methods=["PUT"])
 def toggle_podcast_listened(podcast_id):
     updated_podcast = podcasts.toggle_podcast_listened(podcast_id)
-    
+
     if not updated_podcast:
         return jsonify({"error": "Podcast not found"}), 404
-        
+
     return jsonify({"success": True, "podcast": updated_podcast})
 
 
@@ -113,10 +121,37 @@ def get_audio(filename):
 def get_audio_progress(podcast_id):
     return audio_generation.get_progress_route(podcast_id)
 
+
 # Cover Art Generation
 @app.route("/api/generate-cover", methods=["POST"])
 def generate_cover():
     return cover_art_generation.generate_cover_art()
+
+
+# Replica Conversation Routes
+@app.route("/api/conversations", methods=["POST"])
+def start_conversation():
+    return replica.start_conversation_route()
+
+
+@app.route("/api/conversations", methods=["GET"])
+def list_conversations():
+    return replica.list_conversations_route()
+
+
+@app.route("/api/conversations/<conversation_id>", methods=["GET"])
+def get_conversation(conversation_id):
+    return replica.get_conversation_route(conversation_id)
+
+
+@app.route("/api/conversations/<conversation_id>/end", methods=["POST"])
+def end_conversation(conversation_id):
+    return replica.end_conversation_route(conversation_id)
+
+
+@app.route("/api/conversations/<conversation_id>", methods=["DELETE"])
+def delete_conversation(conversation_id):
+    return replica.delete_conversation_route(conversation_id)
 
 
 if __name__ == "__main__":
