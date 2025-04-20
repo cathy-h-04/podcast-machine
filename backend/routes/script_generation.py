@@ -162,6 +162,9 @@ If any preferences are not specified, use reasonable defaults.
         output_filename = f"{filename}.txt"
     else:
         output_filename = "output.txt"
+        
+    # Log how many PDFs were processed
+    print(f"Processed {len(pdf_files)} PDFs for script generation")
 
     # Log script to file
     with open(output_filename, "w", encoding="utf-8") as f:
