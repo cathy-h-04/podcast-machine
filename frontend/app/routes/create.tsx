@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 // Note: We're using motion components for animations
 // If framer-motion is not installed, you'll need to run: npm install framer-motion
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router";
 
 export function meta({}) {
   return [
@@ -14,6 +15,9 @@ export function meta({}) {
 }
 
 export default function Home() {
+  // Initialize navigation
+  const navigate = useNavigate();
+  
   // Main form state
   const [prompt, setPrompt] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -27,6 +31,7 @@ export default function Home() {
   
   // Progress tracking state
   const [currentPodcastId, setCurrentPodcastId] = useState<string | null>(null);
+  const [currentProcessId, setCurrentProcessId] = useState<string | null>(null);
   const [progressStatus, setProgressStatus] = useState<{
     status: string;
     step: string;
@@ -192,7 +197,13 @@ export default function Home() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    setProgressStatus(null);
+    // Initialize progress tracking from the beginning
+    setProgressStatus({
+      status: "processing",
+      step: "preparation",
+      progress: 5,
+      message: "Preparing files and inputs..."
+    });
     setCurrentPodcastId(null);
 
     // Hide the form with animation
@@ -217,6 +228,13 @@ export default function Home() {
 
       // Wait for all files to be converted to base64
       const fileData = await Promise.all(filePromises);
+      // Update progress
+      setProgressStatus({
+        status: "processing",
+        step: "script_generation",
+        progress: 15,
+        message: "Generating podcast script..."
+      });
 
       // Create request data
       const requestData = {
@@ -246,6 +264,20 @@ export default function Home() {
 
       const data = await response.json();
       console.log("Response data:", data);
+      
+      // If we have a process_id from the response, start polling for script generation progress
+      if (data.process_id) {
+        setCurrentProcessId(data.process_id);
+        setProgressPollingActive(true);
+      } else {
+        // If no process_id, manually update progress
+        setProgressStatus({
+          status: "processing",
+          step: "script_complete",
+          progress: 40,
+          message: "Script generated successfully. Preparing audio generation..."
+        });
+      }
 
       // If we have a podcast_id from the script generation, generate audio and cover art for it
       if (data.podcast_id) {
@@ -258,12 +290,12 @@ export default function Home() {
           // Start polling for progress updates
           setProgressPollingActive(true);
 
-          // Initial progress status
+          // Update progress for audio generation
           setProgressStatus({
-            status: "initializing",
-            step: "setup",
-            progress: 5,
-            message: "Preparing to generate audio...",
+            status: "processing",
+            step: "audio_setup",
+            progress: 45,
+            message: "Setting up audio generation...",
           });
 
           // Call the audio generation endpoint
@@ -381,47 +413,97 @@ export default function Home() {
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
-    const pollProgress = async () => {
-      if (!progressPollingActive || !currentPodcastId) return;
+    // Only set up polling if it's active
+    if (progressPollingActive) {
+      console.log("Setting up progress polling", { currentProcessId, currentPodcastId });
+      
+      // Script generation progress polling
+      if (currentProcessId && !currentPodcastId) {
+        console.log("Starting script progress polling for process ID:", currentProcessId);
+        
+        const pollScriptProgress = async () => {
+          try {
+            const response = await fetch(`/api/script-progress/${currentProcessId}`);
+            if (response.ok) {
+              const progressData = await response.json();
+              console.log("Script progress update:", progressData);
+              setProgressStatus(progressData);
 
-      try {
-        const token = localStorage.getItem("authToken");
-        const response = await fetch(
-          `http://localhost:5111/api/audio-progress/${currentPodcastId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+              // If script generation is complete or has an error, stop polling
+              if (progressData.status === "complete" || progressData.status === "error") {
+                setProgressPollingActive(false);
+                
+                if (progressData.status === "error") {
+                  setIsLoading(false);
+                  setIsFormVisible(true);
+                  alert(`Error: ${progressData.message}`);
+                }
+                // For complete status, we'll continue to audio generation
+                // so we don't stop loading or reset anything
+              }
+            } else {
+              console.error("Failed to fetch script progress");
+            }
+          } catch (error) {
+            console.error("Error polling for script progress:", error);
           }
-        );
-
-        if (response.ok) {
-          const progressData = await response.json();
-          setProgressStatus(progressData);
-
-          // If we're done or there's an error, stop polling
-          if (progressData.status === "complete" || progressData.status === "error") {
-            setProgressPollingActive(false);
-          }
-        } else {
-          console.error("Error fetching progress:", response.statusText);
-        }
-      } catch (error) {
-        console.error("Error polling progress:", error);
+        };
+        
+        // Poll immediately
+        pollScriptProgress();
+        // Then set up interval
+        intervalId = setInterval(pollScriptProgress, 2000);
       }
-    };
+      
+      // Audio generation progress polling
+      else if (currentPodcastId) {
+        console.log("Starting audio progress polling for podcast ID:", currentPodcastId);
+        
+        const pollAudioProgress = async () => {
+          try {
+            const response = await fetch(`/api/audio-progress/${currentPodcastId}`);
+            if (response.ok) {
+              const progressData = await response.json();
+              console.log("Audio progress update:", progressData);
+              setProgressStatus(progressData);
 
-    if (progressPollingActive && currentPodcastId) {
-      // Poll immediately
-      pollProgress();
-      // Then set up interval
-      intervalId = setInterval(pollProgress, 2000);
+              // If the process is complete or has an error, stop polling
+              if (progressData.status === "complete" || progressData.status === "error") {
+                setProgressPollingActive(false);
+                
+                if (progressData.status === "complete") {
+                  setIsLoading(false);
+                  // Navigate to the podcast page
+                  navigate(`/podcast/${currentPodcastId}`);
+                } else if (progressData.status === "error") {
+                  setIsLoading(false);
+                  setIsFormVisible(true);
+                  alert(`Error: ${progressData.message}`);
+                }
+              }
+            } else {
+              console.error("Failed to fetch audio progress");
+            }
+          } catch (error) {
+            console.error("Error polling for audio progress:", error);
+          }
+        };
+        
+        // Poll immediately
+        pollAudioProgress();
+        // Then set up interval
+        intervalId = setInterval(pollAudioProgress, 2000);
+      }
     }
 
+    // Cleanup function
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      if (intervalId) {
+        console.log("Clearing progress polling interval");
+        clearInterval(intervalId);
+      }
     };
-  }, [progressPollingActive, currentPodcastId]);
+  }, [progressPollingActive, currentPodcastId, currentProcessId, navigate, setIsLoading, setIsFormVisible]);
 
   return (
     <div className="min-h-screen py-6 px-4 sm:px-6 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-950">

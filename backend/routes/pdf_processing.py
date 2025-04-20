@@ -5,6 +5,18 @@ from . import podcasts
 import base64
 import tempfile
 import os
+import logging
+import time
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('pdf_processing')
+
+# Store progress information for each script generation process
+script_progress_data = {}
 import anthropic
 from dotenv import load_dotenv
 
@@ -165,31 +177,82 @@ def check_content_suitability(pdf_contents):
     return True, ""
 
 
+def get_script_progress_route(process_id):
+    """API endpoint to get the progress of script generation"""
+    if process_id not in script_progress_data:
+        logger.warning(f"Progress data not found for process: {process_id}")
+        return jsonify({
+            "status": "unknown",
+            "step": "unknown",
+            "progress": 0,
+            "message": "No progress data available"
+        }), 404
+    
+    logger.info(f"Returning progress data for process {process_id}: {script_progress_data[process_id]}")
+    return jsonify(script_progress_data[process_id])
+
+
 def generate_script_route():
     """API endpoint to convert PDF(s) to podcast, debate, or teaching script based on user preferences"""
     try:
-        print("=== Starting generate_script_route ===")
+        logger.info("=== Starting generate_script_route ===")
         # Get JSON data from request
         data = request.json
-        print("Request data:", data)
+        logger.info("Request data received")
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
+            
+        # Generate a unique process ID for tracking progress
+        process_id = str(time.time())
+        
+        # Initialize progress tracking
+        script_progress_data[process_id] = {
+            "status": "processing",
+            "step": "initialization",
+            "progress": 5,
+            "message": "Initializing script generation process",
+            "timestamp": time.time()
+        }
 
         # Check if mode is 'summaritive' - only process this mode
         mode = data.get("mode", "").lower()
         if mode != "summaritive":
+            script_progress_data[process_id] = {
+                "status": "error",
+                "step": "validation",
+                "progress": 0,
+                "message": "This endpoint only processes 'summaritive' mode requests",
+                "timestamp": time.time()
+            }
             return jsonify(
-                {"error": "This endpoint only processes 'summaritive' mode requests"}
+                {"error": "This endpoint only processes 'summaritive' mode requests",
+                 "process_id": process_id}
             ), 400
 
         # Check if any files were uploaded
         if "files" not in data or not data["files"]:
-            return jsonify({"error": "No files uploaded"}), 400
+            script_progress_data[process_id] = {
+                "status": "error",
+                "step": "validation",
+                "progress": 0,
+                "message": "No files uploaded",
+                "timestamp": time.time()
+            }
+            return jsonify({"error": "No files uploaded", "process_id": process_id}), 400
+            
+        # Update progress
+        script_progress_data[process_id] = {
+            "status": "processing",
+            "step": "file_validation",
+            "progress": 10,
+            "message": "Validating uploaded files",
+            "timestamp": time.time()
+        }
 
         # Get all base64 encoded files
         base64_files = data["files"]
 
-        print("Received files:", base64_files)
+        logger.info(f"Received {len(base64_files)} files")
 
         # Get user message and style
         user_message = data.get("context", "")
@@ -197,23 +260,70 @@ def generate_script_route():
 
         # Validate style
         if style not in ["podcast", "debate", "duck"]:
+            script_progress_data[process_id] = {
+                "status": "error",
+                "step": "validation",
+                "progress": 0,
+                "message": "Invalid style. Must be 'podcast', 'debate', or 'duck'",
+                "timestamp": time.time()
+            }
             return jsonify(
-                {"error": "Invalid style. Must be 'podcast', 'debate', or 'duck'"}
+                {"error": "Invalid style. Must be 'podcast', 'debate', or 'duck'",
+                 "process_id": process_id}
             ), 400
+            
+        # Update progress
+        script_progress_data[process_id] = {
+            "status": "processing",
+            "step": "processing_files",
+            "progress": 20,
+            "message": "Processing PDF files",
+            "timestamp": time.time()
+        }
 
         # Process PDF files
         pdf_contents, temp_files, filenames = process_pdf_files(base64_files)
 
-        # Print the PDF contents for debugging
-        print("PDF contents after processing:", pdf_contents)
+        # Update progress
+        script_progress_data[process_id] = {
+            "status": "processing",
+            "step": "content_check",
+            "progress": 30,
+            "message": "Checking content suitability",
+            "timestamp": time.time()
+        }
+        
+        # Log the PDF contents for debugging
+        logger.info(f"PDF contents processed: {len(pdf_contents)} files")
 
         # Check if content is suitable
         is_suitable, reason = check_content_suitability(pdf_contents)
         if not is_suitable:
             # Clean up temporary files
             cleanup_temp_files(temp_files)
+            
+            script_progress_data[process_id] = {
+                "status": "error",
+                "step": "content_check",
+                "progress": 0,
+                "message": f"Content unsuitable: {reason}",
+                "timestamp": time.time()
+            }
 
-            return jsonify({"error": "Content unsuitable", "message": reason}), 400
+            return jsonify({
+                "error": "Content unsuitable", 
+                "message": reason,
+                "process_id": process_id
+            }), 400
+            
+        # Update progress
+        script_progress_data[process_id] = {
+            "status": "processing",
+            "step": "script_generation",
+            "progress": 40,
+            "message": "Generating script with AI",
+            "timestamp": time.time()
+        }
 
         # Create a title based on the filenames
         if len(filenames) == 1:
@@ -288,6 +398,15 @@ def generate_script_route():
 
         # Clean up the temporary files
         cleanup_temp_files(temp_files)
+        
+        # Update progress
+        script_progress_data[process_id] = {
+            "status": "processing",
+            "step": "saving_podcast",
+            "progress": 80,
+            "message": "Script generated successfully, saving podcast",
+            "timestamp": time.time()
+        }
 
         # Use title from settings if available
         title = settings.get("title", filename or "Untitled Podcast")
@@ -299,6 +418,15 @@ def generate_script_route():
             script=script,
             audio_url="#",  # Placeholder URL until we implement actual audio generation
         )
+        
+        # Update progress to complete
+        script_progress_data[process_id] = {
+            "status": "complete",
+            "step": "finished",
+            "progress": 90,
+            "message": "Script generation complete, ready for audio generation",
+            "timestamp": time.time()
+        }
 
         # Return the generated script and the default settings
         return jsonify(
@@ -308,6 +436,7 @@ def generate_script_route():
                 "settings_used": settings,
                 "style": style,
                 "podcast_id": podcast["id"],  # Include the ID of the new podcast
+                "process_id": process_id,  # Include the process ID for progress tracking
             }
         ), 200
 
@@ -319,9 +448,27 @@ def generate_script_route():
         # Print detailed error information for debugging
         import traceback
 
-        print("ERROR in generate_script_route:", str(e))
-        print("Traceback:", traceback.format_exc())
+        logger.error(f"ERROR in generate_script_route: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # Update progress with error
+        if 'process_id' in locals():
+            script_progress_data[process_id] = {
+                "status": "error",
+                "step": "script_generation",
+                "progress": 0,
+                "message": f"Error: {str(e)}",
+                "timestamp": time.time()
+            }
+            error_response = {
+                "error": "Failed to convert PDF to script", 
+                "message": str(e),
+                "process_id": process_id
+            }
+        else:
+            error_response = {
+                "error": "Failed to convert PDF to script", 
+                "message": str(e)
+            }
 
-        return jsonify(
-            {"error": "Failed to convert PDF to script", "message": str(e)}
-        ), 500
+        return jsonify(error_response), 500
