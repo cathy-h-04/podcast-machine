@@ -2,29 +2,31 @@
 
 ## 🎧 Overview
 
-Claude Yap is an AI-powered podcast generator that leverages Claude AI to create engaging audio content. It offers two primary modes of operation:
+Claude Yap transforms PDFs and research topics into engaging, multi-voice podcasts using Claude AI and advanced text-to-speech technology. The app creates natural-sounding conversations in various formats, with custom voices for each speaker and automatically-generated cover art.
 
-- **File Summary Mode**: Upload PDFs and Claude will summarize and discuss their content in podcast format
-- [TODO: coming next] **AI Research Mode**: Claude researches a topic you provide and generates podcast content based on that research
+## ✨ Key Features
 
-The application supports various podcast formats (debate, conversation, educational) with different numbers of participants, allowing for a wide range of audio content styles.
-
-## ✨ Features
-
-- **Multiple Podcast Formats**: Choose between debate-style, conversational podcast, or educational formats
-- **Customizable Participants**: Select between one, two, or three speakers for your podcast
-- **PDF Processing**: Upload PDF documents for Claude to analyze and discuss
-- **User Authentication**: Simple login/logout functionality
-- **Audio Generation**: Convert generated scripts into lifelike audio using text-to-speech technology
+- **Intelligent PDF Analysis**: Upload PDFs and Claude will analyze, summarize, and transform them into conversational podcasts
+- **Multiple Podcast Formats**:
+  - **Podcast Style**: Traditional host/guest conversational format
+  - **Debate Style**: Two perspectives debating topics from the source material
+  - **Duck Mode**: Educational teacher/student dialogue format
+- **Multi-Speaker Natural Voices**: Uses Cartesia TTS API to generate distinctly different voices for each speaker
+- **Automated Cover Art**: Creates custom podcast covers using Claude's artifact generation or Stable Diffusion
+- **Advanced Audio Player**: Professional-grade player with keyboard shortcuts, playback speed control, and progress tracking
+- **Video Conference Integration**: Discuss podcasts via video call through Tavus API integration
+- **Real-Time Progress Tracking**: Monitor podcast generation progress with detailed status updates
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js (v16 or higher)
+- Node.js (v16+)
 - Python 3.9+
-- Claude API access
-- Cartesia API access for text-to-speech
+- Claude API key (Anthropic)
+- Cartesia API key (for text-to-speech)
+- Hugging Face API token (for cover art generation)
+- Tavus API credentials (for video conference)
 
 ### Installation
 
@@ -40,9 +42,9 @@ cd claude-yap
 ```bash
 cd backend
 pip install -r requirements.txt
-# Create a .env file with your API keys
-echo "ANTHROPIC_API_KEY=your-anthropic-api-key-here" > .env
-echo "CARTESIA_API_KEY=your-cartesia-api-key-here" >> .env
+# Create .env file using example template
+cp .env.example .env
+# Fill in your API keys in the .env file
 ```
 
 3. Set up the frontend
@@ -70,74 +72,57 @@ npm run dev
 
 3. Open your browser and navigate to `http://localhost:5173`
 
-## 🏗️ Project Structure
+## 🖥️ Technologies Used
 
-```
-claude-yap/
-├── backend/                 # Python backend with Claude API integration
-│   ├── app.py               # Main Flask application
-│   ├── requirements.txt     # Python dependencies
-│   ├── routes/              # API route handlers
-│   │   ├── audio_generation.py  # Audio generation endpoints
-│   │   ├── auth.py          # Authentication endpoints
-│   │   ├── pdf_processing.py # PDF handling and script generation
-│   │   ├── podcasts.py      # Podcast management
-│   │   └── script_generation.py # Script generation logic
-│   ├── services/            # External service integrations
-│   │   ├── claude_client.py # Claude API client
-│   │   └── tts_client.py    # Text-to-speech service client
-│   ├── utils/               # Utility functions
-│   │   └── auth_helpers.py  # Authentication helper functions
-│   ├── data/                # Data storage
-│   │   ├── podcasts.json    # Saved podcast data
-│   │   ├── prompts.json     # User prompts data
-│   │   └── users.json       # User account data
-│   ├── static/              # Static files
-│   │   └── audio/           # Generated audio files
-│   └── outputs/             # Script output files
-└── frontend/                # React frontend
-    ├── app/                 # Application code
-    │   ├── routes/          # Page components
-    │   │   ├── create.tsx   # Podcast creation page
-    │   │   ├── dashboard.tsx # Main dashboard
-    │   │   ├── login.tsx    # Login page
-    │   │   ├── profile.tsx  # User profile page
-    │   │   └── register.tsx # Registration page
-    │   ├── app.css          # Global styles
-    │   ├── root.tsx         # Root component
-    │   └── routes.ts        # Route definitions
-    ├── public/              # Public assets
-    ├── package.json         # Node dependencies
-    ├── tsconfig.json        # TypeScript configuration
-    └── vite.config.ts       # Vite configuration
-```
+### Frontend
+- React with React Router
+- Framer Motion for animations
+- Advanced HTML5 audio player
+
+### Backend
+- Python with Flask
+- Claude 3.7 Sonnet and Claude 3 Opus for content generation
+- Cartesia API for high-quality multi-speaker text-to-speech
+- Claude artifacts tool and Hugging Face Stable Diffusion for cover art
+- Tavus API for video conference integration
+- FFmpeg for audio processing
 
 ## 🧩 How It Works
 
-1. **Create an Account**: Register and login to access all features and save your podcasts
-2. **Select a Podcast Format**: Choose between debate, conversation, or educational styles
-3. **Choose Number of Participants**: Select one, two, or three speakers
-4. **Select Content Source**: Either AI research or PDF document summary
-5. **Provide Input**: Enter research topic or upload PDF files
-6. **Generate Script**: Claude processes your request and generates a podcast script
-7. **Convert to Audio**: The system transforms your script into lifelike audio using TTS
-8. **Download & Share**: Access your finished podcast from your profile and share it
+1. **Upload Content**: Submit PDFs for analysis or provide a research topic
+2. **Select Format**: Choose between podcast, debate, or educational "duck" mode
+3. **Script Generation**: Claude analyzes content and creates a conversational script
+4. **Voice Assignment**: The system automatically assigns distinct voices to each speaker
+5. **Audio Generation**: Cartesia TTS converts the script into natural-sounding multi-voice audio
+6. **Cover Art Creation**: Automatically generates custom cover art for each podcast
+7. **Playback & Sharing**: Listen to your podcast with advanced playback controls
+8. **AI Video Discussion**: Have 1-on-1 video calls with AI personalities to discuss your podcasts
 
-## 🖼️ Screenshots
+## 🎮 Advanced Features
 
-TODO:
+### Audio Player Controls
+- Keyboard shortcuts for playback control (space, arrows, number keys)
+- Variable playback speed (0.5x to 2x)
+- Jump forward/backward functionality
 
-## 🛠️ Technologies Used
+### Video Conference
+Discuss podcasts with AI personalities through Tavus API video conference integration
 
-### Frontend
+### Library Management
+- Track listened/unlistened podcasts
+- Rename and organize your podcast collection
 
-- React with React Router
-- Tailwind CSS for styling
-- Framer Motion for animations
+## 🛠️ Development
 
-### Backend
+### Project Structure
 
-- Python with Flask
-- Claude API for AI content generation
-- Cartesia API for high-quality text-to-speech
-- PDF processing libraries
+- **Frontend**: React SPA with responsive UI and advanced audio player
+- **Backend**: Flask API with Claude integration, audio processing, and data management
+
+### Key Components
+
+- **Claude Integration**: Uses both Claude 3.7 Sonnet and Claude 3 Opus for different tasks
+- **Script Processing**: Intelligently parses scripts to identify speakers and dialogue
+- **TTS Engine**: Uses Cartesia's advanced TTS API for natural multi-speaker audio
+- **Cover Art Generation**: Uses either Claude artifacts (SVG) or Stable Diffusion (PNG)
+
