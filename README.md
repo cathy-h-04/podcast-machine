@@ -1,12 +1,12 @@
-# Claude Yap - AI Podcast Generator
+# Podcast Machine - AI Podcast Generator
 
 ## 🎧 Overview
 
-Claude Yap transforms PDFs and research topics into engaging, multi-voice podcasts using Claude AI and advanced text-to-speech technology. The app creates natural-sounding conversations in various formats, with custom voices for each speaker and automatically-generated cover art.
+Podcast Machine transforms PDFs and research topics into engaging, multi-voice podcasts using Claude AI and advanced text-to-speech technology. The app creates natural-sounding conversations in various formats, with custom voices for each speaker and automatically-generated cover art.
 
 ## ✨ Key Features
 
-- **Intelligent PDF Analysis**: Upload PDFs and Claude will analyze, summarize, and transform them into conversational podcasts
+- **Intelligent PDF Analysis**: Upload PDFs and Podcast Machine will analyze, summarize, and transform them into conversational podcasts
 - **Multiple Podcast Formats**:
   - **Podcast Style**: Traditional host/guest conversational format
   - **Debate Style**: Two perspectives debating topics from the source material
@@ -97,6 +97,8 @@ npm run dev
 6. **Cover Art Creation**: Automatically generates custom cover art for each podcast
 7. **Playback & Sharing**: Listen to your podcast with advanced playback controls
 8. **AI Video Discussion**: Have 1-on-1 video calls with AI personalities to discuss your podcasts
+
+See example generated script in example_script.txt
 
 ## 🎮 Advanced Features
 
