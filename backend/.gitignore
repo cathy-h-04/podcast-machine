@@ -11,7 +11,7 @@ backend/env/
 static/
 
 # data
-data/
+backend/data/
 
 # Distribution / packaging
 .Python
